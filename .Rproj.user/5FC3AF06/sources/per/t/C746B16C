@@ -1,0 +1,26 @@
+{
+    "id": "C746B16C",
+    "path": "~/Desktop/Dries Lab/rDeckgl/examples/basic_scatterplot.R",
+    "project_path": "examples/basic_scatterplot.R",
+    "type": "r_source",
+    "hash": "648906700",
+    "contents": "",
+    "dirty": false,
+    "created": 1761758909880.0,
+    "source_on_save": false,
+    "relative_order": 4,
+    "properties": {
+        "source_window_id": "",
+        "Source": "Source",
+        "cursorPosition": "12,49",
+        "scrollLine": "0"
+    },
+    "folds": "",
+    "lastKnownWriteTime": 1761759138,
+    "encoding": "UTF-8",
+    "collab_server": "",
+    "source_window": "",
+    "last_content_update": 1761759138686,
+    "read_only": false,
+    "read_only_alternatives": []
+}
