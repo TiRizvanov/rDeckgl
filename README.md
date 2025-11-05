@@ -17,7 +17,7 @@ The package is not on CRAN yet. Install from source (e.g. using `devtools`):
 ```r
 install.packages("devtools")      # if needed
 devtools::install()               # from a local checkout
-# or: devtools::install_github("DriesVerachtert/rDeckgl")
+# or: devtools::install_github("TiRizvanov/rDeckgl")
 ```
 
 The htmlwidgets assets (deck.gl 9.2.2 bundle, CSS, and widget glue) are bundled under `inst/htmlwidgets`, so no extra JavaScript setup is required.

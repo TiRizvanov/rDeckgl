@@ -1,17 +1,31 @@
 Package: rDeckgl
 Type: Package
-Title: "Deck.gl for R"
+Title: Deck.gl for R
 Version: 0.1.0
-Description: "R htmlwidget bindings for deck.gl, a WebGL-powered framework for visual exploratory data analysis of large datasets. Create interactive visualizations using deck.gl JSON specifications with server-side data hydration via DuckDB."
-License: BSD-3-Clause
-Imports:
-    htmlwidgets (>= 1.5.4),
-    shiny (>= 1.7.0),
-    jsonlite,
-    yaml,
-    DBI,
-    duckdb,
-    arrow
+Authors@R: c(
+    person(
+      "Timur", "Rizvanov",
+      email = "timurr@bu.edu",
+      role = c("aut", "cre")
+    )
+  )
+Description: R htmlwidget bindings for deck.gl, a WebGL-powered framework for
+    visual exploratory data analysis of large datasets. Create interactive
+    visualizations using deck.gl JSON specifications with server-side data
+    hydration via DuckDB.
+License: MIT + file LICENSE
+URL: https://github.com/TiRizvanov/rDeckgl
+BugReports: https://github.com/TiRizvanov/rDeckgl/issues
 Encoding: UTF-8
 LazyData: true
 RoxygenNote: 7.3.3
+Depends:
+    R (>= 4.1.0)
+Imports:
+    htmlwidgets (>= 1.5.4),
+    shiny (>= 1.7.0),
+    jsonlite (>= 1.8.0),
+    yaml (>= 2.3.0),
+    DBI (>= 1.1.0),
+    duckdb (>= 0.8.0),
+    arrow (>= 12.0.0)

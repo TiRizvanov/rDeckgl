@@ -117,15 +117,35 @@ deckgl <- function(
   on.exit(try(DBI::dbDisconnect(con), silent = TRUE), add = TRUE)
   try(DBI::dbExecute(con, "LOAD 'arrow';"), silent = TRUE)
 
-  # 5) Handle data
+  # 5) Handle data registration
+  # Convert R data.frames to DuckDB tables for efficient server-side queries
   if (!is.null(data)) {
-    stopifnot(is.list(data))
+    if (!is.list(data)) {
+      stop("'data' must be a named list of data.frames")
+    }
+    if (is.null(names(data)) || any(names(data) == "")) {
+      stop("All elements in 'data' list must be named")
+    }
+
     for (nm in names(data)) {
       df <- data[[nm]]
-      stopifnot(inherits(df, "data.frame"))
-      # Convert factors to character for JSON serialization
-      df[] <- lapply(df, function(col) if (is.factor(col)) as.character(col) else col)
-      DBI::dbWriteTable(con, nm, df, overwrite = TRUE)
+      if (!inherits(df, "data.frame")) {
+        stop(sprintf("Element '%s' in data list must be a data.frame, got: %s",
+                     nm, class(df)[1]))
+      }
+
+      # Convert factors to character for safe JSON serialization
+      # Factors can cause issues when serializing to JSON
+      df[] <- lapply(df, function(col) {
+        if (is.factor(col)) as.character(col) else col
+      })
+
+      # Register data.frame as DuckDB table
+      tryCatch({
+        DBI::dbWriteTable(con, nm, df, overwrite = TRUE)
+      }, error = function(e) {
+        stop(sprintf("Failed to register table '%s' in DuckDB: %s", nm, e$message))
+      })
     }
   }
 
