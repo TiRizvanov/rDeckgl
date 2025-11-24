@@ -1,0 +1,46 @@
+url: https://tirizvanov.github.io/rDeckgl/
+template:
+  bootstrap: 5
+  bootswatch: flatly
+
+navbar:
+  structure:
+    left: [home, reference, articles, news]
+    right: [search, github]
+  components:
+    home:
+      icon: fas fa-home fa-lg
+      href: index.html
+    reference:
+      text: Reference
+      href: reference/index.html
+    articles:
+      text: Articles
+      menu:
+      - text: Getting Started
+        href: articles/getting-started.html
+    news:
+      text: News
+      href: news/index.html
+    github:
+      icon: fab fa-github fa-lg
+      href: https://github.com/TiRizvanov/rDeckgl
+
+reference:
+- title: Core Functions
+  desc: Main visualization functions
+  contents:
+  - deckgl
+  - deckglOutput
+  - renderDeckgl
+
+- title: Internal Functions
+  desc: Helper functions for internal use
+  contents:
+  - hydrate_deckgl_spec
+
+articles:
+- title: Get Started
+  navbar: ~
+  contents:
+  - getting-started

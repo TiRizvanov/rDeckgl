@@ -18,21 +18,21 @@ A Shiny output binding for use in the UI.
 Use this in the UI to create a placeholder for the Deck.gl visualization.
 }
 \examples{
-\dontrun{
-library(shiny)
-library(rDeckgl)
+if (interactive()) {
+  library(shiny)
+  library(rDeckgl)
 
-ui <- fluidPage(
-  deckglOutput("myDeckgl", width = "100\%", height = "600px")
-)
+  ui <- fluidPage(
+    deckglOutput("myDeckgl", width = "100\%", height = "600px")
+  )
 
-server <- function(input, output, session) {
-  output$myDeckgl <- renderDeckgl({
-    deckgl(spec = my_spec, data = my_data)
-  })
-}
+  server <- function(input, output, session) {
+    output$myDeckgl <- renderDeckgl({
+      deckgl(spec = my_spec, data = my_data)
+    })
+  }
 
-shinyApp(ui, server)
+  shinyApp(ui, server)
 }
 
 }

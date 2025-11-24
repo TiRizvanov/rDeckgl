@@ -1,4 +1,26 @@
+# R history and workspace files
 .Rproj.user
 .Rhistory
 .RData
 .Ruserdata
+
+# Build outputs
+*.tar.gz
+*.tgz
+.Rcheck/
+rDeckgl.Rcheck/
+
+# pkgdown
+docs/
+pkgdown/
+
+# IDE files
+.DS_Store
+*.swp
+*.swo
+*~
+
+# Vignette outputs
+vignettes/*.html
+vignettes/*.pdf
+inst/doc/

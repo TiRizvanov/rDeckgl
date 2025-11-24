@@ -21,35 +21,35 @@ A Shiny render function for use in the server.
 Use this in the server to render the Deck.gl visualization to the output.
 }
 \examples{
-\dontrun{
-library(shiny)
-library(rDeckgl)
+if (interactive()) {
+  library(shiny)
+  library(rDeckgl)
 
-ui <- fluidPage(
-  deckglOutput("myDeckgl")
-)
+  ui <- fluidPage(
+    deckglOutput("myDeckgl")
+  )
 
-server <- function(input, output, session) {
-  output$myDeckgl <- renderDeckgl({
-    spec <- list(
-      `@type` = "DeckGL",
-      initialViewState = list(longitude = -122.4, latitude = 37.76, zoom = 12),
-      layers = list(
-        list(
-          `@type` = "ScatterplotLayer",
-          id = "points",
-          data = list(type = "duckdb", query = "SELECT * FROM points"),
-          getPosition = "@=[lon, lat]",
-          getRadius = 100,
-          getFillColor = c(255, 0, 0)
+  server <- function(input, output, session) {
+    output$myDeckgl <- renderDeckgl({
+      spec <- list(
+        `@type` = "DeckGL",
+        initialViewState = list(longitude = -122.4, latitude = 37.76, zoom = 12),
+        layers = list(
+          list(
+            `@type` = "ScatterplotLayer",
+            id = "points",
+            data = list(type = "duckdb", query = "SELECT * FROM points"),
+            getPosition = "@=[lon, lat]",
+            getRadius = 100,
+            getFillColor = c(255, 0, 0)
+          )
         )
       )
-    )
-    deckgl(spec = spec, data = list(points = data.frame(lon = -122.4, lat = 37.76)))
-  })
-}
+      deckgl(spec = spec, data = list(points = data.frame(lon = -122.4, lat = 37.76)))
+    })
+  }
 
-shinyApp(ui, server)
+  shinyApp(ui, server)
 }
 
 }

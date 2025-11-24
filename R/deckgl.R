@@ -1,5 +1,8 @@
 # R/deckgl.R
 
+#' @importFrom stats setNames
+NULL
+
 #' Render a Deck.gl visualization
 #'
 #' Creates an interactive deck.gl visualization from a JSON or YAML specification.
@@ -17,50 +20,50 @@
 #' @return An htmlwidget that renders the Deck.gl visualization.
 #'
 #' @examples
-#' \dontrun{
-#' # Simple scatterplot with inline data
-#' spec <- list(
-#'   `@@type` = "DeckGL",
-#'   initialViewState = list(
-#'     longitude = -122.4,
-#'     latitude = 37.76,
-#'     zoom = 12,
-#'     pitch = 0,
-#'     bearing = 0
-#'   ),
-#'   layers = list(
-#'     list(
-#'       `@@type` = "ScatterplotLayer",
-#'       id = "scatterplot",
-#'       data = list(
-#'         type = "duckdb",
-#'         query = "SELECT lon, lat, radius FROM points"
-#'       ),
-#'       getPosition = "@@=[lon, lat]",
-#'       getRadius = "@@=radius",
-#'       getFillColor = c(255, 0, 0)
+#' if (interactive()) {
+#'   # Simple scatterplot with inline data
+#'   spec <- list(
+#'     `@@type` = "DeckGL",
+#'     initialViewState = list(
+#'       longitude = -122.4,
+#'       latitude = 37.76,
+#'       zoom = 12,
+#'       pitch = 0,
+#'       bearing = 0
+#'     ),
+#'     layers = list(
+#'       list(
+#'         `@@type` = "ScatterplotLayer",
+#'         id = "scatterplot",
+#'         data = list(
+#'           type = "duckdb",
+#'           query = "SELECT lon, lat, radius FROM points"
+#'         ),
+#'         getPosition = "@@=[lon, lat]",
+#'         getRadius = "@@=radius",
+#'         getFillColor = c(255, 0, 0)
+#'       )
 #'     )
 #'   )
-#' )
 #'
-#' data <- list(
-#'   points = data.frame(
-#'     lon = c(-122.4, -122.45, -122.35),
-#'     lat = c(37.76, 37.78, 37.74),
-#'     radius = c(100, 150, 200)
+#'   data <- list(
+#'     points = data.frame(
+#'       lon = c(-122.4, -122.45, -122.35),
+#'       lat = c(37.76, 37.78, 37.74),
+#'       radius = c(100, 150, 200)
+#'     )
 #'   )
-#' )
 #'
-#' deckgl(spec = spec, data = data)
+#'   deckgl(spec = spec, data = data)
 #' }
 #'
 #' @export
 deckgl <- function(
-    spec,
-    specType = c("auto", "json", "yaml"),
-    data     = NULL,
-    width    = NULL,
-    height   = NULL
+  spec,
+  specType = c("auto", "json", "yaml"),
+  data = NULL,
+  width = NULL,
+  height = NULL
 ) {
   specType <- match.arg(specType)
 
@@ -89,7 +92,10 @@ deckgl <- function(
       spec_list <- spec
     } else {
       txt <- if (file.exists(spec)) readLines(spec) else spec
-      spec_list <- jsonlite::fromJSON(paste(txt, collapse = "\n"), simplifyVector = FALSE)
+      spec_list <- jsonlite::fromJSON(
+        paste(txt, collapse = "\n"),
+        simplifyVector = FALSE
+      )
     }
   } else if (fmt == "yaml") {
     if (is.list(spec)) {
@@ -103,13 +109,20 @@ deckgl <- function(
   # 3) Embed width/height into spec_list
   if (!is.null(spec_list)) {
     strip_px <- function(x) {
-      if (is.numeric(x)) return(as.integer(x))
-      if (is.character(x) && grepl("^[0-9]+px$", x))
+      if (is.numeric(x)) {
+        return(as.integer(x))
+      }
+      if (is.character(x) && grepl("^[0-9]+px$", x)) {
         return(as.integer(sub("px$", "", x)))
+      }
       NULL
     }
-    if (is.null(spec_list$width) && !is.null(w <- strip_px(width))) spec_list$width <- w
-    if (is.null(spec_list$height) && !is.null(h <- strip_px(height))) spec_list$height <- h
+    if (is.null(spec_list$width) && !is.null(w <- strip_px(width))) {
+      spec_list$width <- w
+    }
+    if (is.null(spec_list$height) && !is.null(h <- strip_px(height))) {
+      spec_list$height <- h
+    }
   }
 
   # 4) Setup DuckDB connection
@@ -130,8 +143,11 @@ deckgl <- function(
     for (nm in names(data)) {
       df <- data[[nm]]
       if (!inherits(df, "data.frame")) {
-        stop(sprintf("Element '%s' in data list must be a data.frame, got: %s",
-                     nm, class(df)[1]))
+        stop(sprintf(
+          "Element '%s' in data list must be a data.frame, got: %s",
+          nm,
+          class(df)[1]
+        ))
       }
 
       # Convert factors to character for safe JSON serialization
@@ -141,11 +157,18 @@ deckgl <- function(
       })
 
       # Register data.frame as DuckDB table
-      tryCatch({
-        DBI::dbWriteTable(con, nm, df, overwrite = TRUE)
-      }, error = function(e) {
-        stop(sprintf("Failed to register table '%s' in DuckDB: %s", nm, e$message))
-      })
+      tryCatch(
+        {
+          DBI::dbWriteTable(con, nm, df, overwrite = TRUE)
+        },
+        error = function(e) {
+          stop(sprintf(
+            "Failed to register table '%s' in DuckDB: %s",
+            nm,
+            e$message
+          ))
+        }
+      )
     }
   }
 
@@ -171,26 +194,33 @@ deckgl <- function(
       session$input[[paste0(uid, "_deckgl_query")]],
       {
         req <- session$input[[paste0(uid, "_deckgl_query")]]
-        if (is.null(req)) return()
+        if (is.null(req)) {
+          return()
+        }
 
         if (is.null(con)) {
           warning("Connection for widget ", uid, " is not available.")
           return()
         }
 
-        tryCatch({
-          dfres <- DBI::dbGetQuery(con, req$sql)
-          payload <- lapply(seq_len(nrow(dfres)), function(i) as.list(dfres[i, , drop = FALSE]))
-          session$sendCustomMessage(
-            paste0(uid, "_deckgl_response"),
-            list(request = req$request, data = payload)
-          )
-        }, error = function(e) {
-          session$sendCustomMessage(
-            paste0(uid, "_deckgl_response"),
-            list(request = req$request, error = as.character(e))
-          )
-        })
+        tryCatch(
+          {
+            dfres <- DBI::dbGetQuery(con, req$sql)
+            payload <- lapply(seq_len(nrow(dfres)), function(i) {
+              as.list(dfres[i, , drop = FALSE])
+            })
+            session$sendCustomMessage(
+              paste0(uid, "_deckgl_response"),
+              list(request = req$request, data = payload)
+            )
+          },
+          error = function(e) {
+            session$sendCustomMessage(
+              paste0(uid, "_deckgl_response"),
+              list(request = req$request, error = as.character(e))
+            )
+          }
+        )
       },
       ignoreNULL = TRUE
     )
@@ -208,16 +238,16 @@ deckgl <- function(
 
   # 8) Create widget
   widget_data <- list(
-    spec     = spec_list,
+    spec = spec_list,
     widgetId = uid
   )
 
   htmlwidgets::createWidget(
-    name         = "deckgl",
-    x            = widget_data,
-    width        = width,
-    height       = height,
-    package      = "rDeckgl",
+    name = "deckgl",
+    x = widget_data,
+    width = width,
+    height = height,
+    package = "rDeckgl",
     sizingPolicy = htmlwidgets::sizingPolicy(browser.fill = TRUE)
   )
 }
@@ -235,9 +265,13 @@ deckgl <- function(
 hydrate_deckgl_spec <- function(spec, con) {
   transform_node <- function(node, inside_data = FALSE) {
     if (is.list(node)) {
-      if (!is.null(node$type) && identical(node$type, "duckdb") && inside_data) {
+      if (
+        !is.null(node$type) && identical(node$type, "duckdb") && inside_data
+      ) {
         if (is.null(con)) {
-          stop("Deck.gl spec includes DuckDB data but no active connection is available.")
+          stop(
+            "Deck.gl spec includes DuckDB data but no active connection is available."
+          )
         }
         query <- node$query
         if (!is.character(query) || length(query) < 1 || !nzchar(query[[1]])) {
@@ -249,9 +283,13 @@ hydrate_deckgl_spec <- function(spec, con) {
           return(list())
         }
         # Convert factors to characters for safe JSON serialization
-        df[] <- lapply(df, function(col) if (is.factor(col)) as.character(col) else col)
+        df[] <- lapply(df, function(col) {
+          if (is.factor(col)) as.character(col) else col
+        })
         # Convert to row-oriented format
-        rows <- lapply(seq_len(nrow(df)), function(i) as.list(df[i, , drop = FALSE]))
+        rows <- lapply(seq_len(nrow(df)), function(i) {
+          as.list(df[i, , drop = FALSE])
+        })
         return(rows)
       }
 
@@ -261,7 +299,10 @@ hydrate_deckgl_spec <- function(spec, con) {
 
       result <- node
       for (nm in names(result)) {
-        result[[nm]] <- transform_node(result[[nm]], inside_data = inside_data || identical(nm, "data"))
+        result[[nm]] <- transform_node(
+          result[[nm]],
+          inside_data = inside_data || identical(nm, "data")
+        )
       }
       return(result)
     }

@@ -1,2 +1,10 @@
 ^.*\.Rproj$
 ^\.Rproj\.user$
+^LICENSE\.md$
+^\.github$
+^examples$
+^\.RData$
+^\.Rhistory$
+^\.DS_Store$
+^\.git$
+^\.gitignore$
