@@ -6,7 +6,7 @@
 \alias{rDeckgl-package}
 \title{rDeckgl: Deck.gl for R}
 \description{
-R htmlwidget bindings for deck.gl, a WebGL-powered framework for visual exploratory data analysis of large datasets. Create interactive visualizations using deck.gl JSON specifications with server-side data hydration via DuckDB.
+TODO
 }
 \seealso{
 Useful links:

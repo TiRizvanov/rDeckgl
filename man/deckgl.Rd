@@ -22,9 +22,9 @@ attempts to infer the format from the input.}
 \item{data}{Named list of data.frames to register in DuckDB. These tables
 can be referenced in the spec using `type = "duckdb"` data nodes.}
 
-\item{width}{CSS or pixel width (e.g. "100%", "600px", or numeric).}
+\item{width}{CSS or pixel width (e.g. "100\%", "600px", or numeric).}
 
-\item{height}{CSS or pixel height (e.g. "100%", "600px", or numeric).}
+\item{height}{CSS or pixel height (e.g. "100\%", "600px", or numeric).}
 }
 \value{
 An htmlwidget that renders the Deck.gl visualization.
