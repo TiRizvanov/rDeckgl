@@ -3,16 +3,11 @@ Type: Package
 Title: Deck.gl for R
 Version: 0.1.0
 Authors@R: c(
-    person(
-      "Timur", "Rizvanov",
-      email = "timurr@bu.edu",
-      role = c("aut", "cre")
-    )
+    person("Timur", "Rizvanov", ,"timurr@bu.edu", role = c("aut", "cre")),
+    person("Edward C.", "Ruiz", ,"ecr7407@gmail.com", role = c("aut")),
+    person("Ruben", "Dries", , "rubendries@gmail.com", role = c("aut", "rev"))
   )
-Description: R htmlwidget bindings for deck.gl, a WebGL-powered framework for
-    visual exploratory data analysis of large datasets. Create interactive
-    visualizations using deck.gl JSON specifications with server-side data
-    hydration via DuckDB.
+Description: TODO
 License: MIT + file LICENSE
 URL: https://github.com/TiRizvanov/rDeckgl
 BugReports: https://github.com/TiRizvanov/rDeckgl/issues
