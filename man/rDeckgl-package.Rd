@@ -19,5 +19,11 @@ Useful links:
 \author{
 \strong{Maintainer}: Timur Rizvanov \email{timurr@bu.edu}
 
+Authors:
+\itemize{
+  \item Edward C. Ruiz \email{ecr7407@gmail.com}
+  \item Ruben Dries \email{rubendries@gmail.com} [reviewer]
+}
+
 }
 \keyword{internal}
