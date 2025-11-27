@@ -5,7 +5,7 @@
 #' Use this in the UI to create a placeholder for the Deck.gl visualization.
 #'
 #' @param outputId output variable name
-#' @param width,height CSS dimensions (e.g. '100%', '400px') for the container.
+#' @param width,height CSS dimensions (e.g. '100\%', '400px') for the container.
 #'
 #' @return A Shiny output binding for use in the UI.
 #'
@@ -15,7 +15,7 @@
 #'   library(rDeckgl)
 #'
 #'   ui <- fluidPage(
-#'     deckglOutput("myDeckgl", width = "100%", height = "600px")
+#'     deckglOutput("myDeckgl", height = "600px")
 #'   )
 #'
 #'   server <- function(input, output, session) {

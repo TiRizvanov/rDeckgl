@@ -6,7 +6,7 @@
 \alias{rDeckgl-package}
 \title{rDeckgl: Deck.gl for R}
 \description{
-R htmlwidget bindings for deck.gl, a WebGL-powered framework for visual exploratory data analysis of large datasets. Create interactive visualizations using deck.gl JSON specifications with server-side data hydration via DuckDB.
+TODO
 }
 \seealso{
 Useful links:
@@ -18,6 +18,12 @@ Useful links:
 }
 \author{
 \strong{Maintainer}: Timur Rizvanov \email{timurr@bu.edu}
+
+Authors:
+\itemize{
+  \item Edward C. Ruiz \email{ecr7407@gmail.com}
+  \item Ruben Dries \email{rubendries@gmail.com} [reviewer]
+}
 
 }
 \keyword{internal}

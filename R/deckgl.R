@@ -14,8 +14,8 @@ NULL
 #'                  attempts to infer the format from the input.
 #' @param data      Named list of data.frames to register in DuckDB. These tables
 #'                  can be referenced in the spec using `type = "duckdb"` data nodes.
-#' @param width     CSS or pixel width (e.g. "100%", "600px", or numeric).
-#' @param height    CSS or pixel height (e.g. "100%", "600px", or numeric).
+#' @param width     CSS or pixel width (e.g. "100\%", "600px", or numeric).
+#' @param height    CSS or pixel height (e.g. "100\%", "600px", or numeric).
 #'
 #' @return An htmlwidget that renders the Deck.gl visualization.
 #'
@@ -59,12 +59,11 @@ NULL
 #'
 #' @export
 deckgl <- function(
-  spec,
-  specType = c("auto", "json", "yaml"),
-  data = NULL,
-  width = NULL,
-  height = NULL
-) {
+    spec,
+    specType = c("auto", "json", "yaml"),
+    data = NULL,
+    width = NULL,
+    height = NULL) {
   specType <- match.arg(specType)
 
   # 1) Determine format

@@ -9,7 +9,7 @@ deckglOutput(outputId, width = "100\%", height = "400px")
 \arguments{
 \item{outputId}{output variable name}
 
-\item{width, height}{CSS dimensions (e.g. '100%', '400px') for the container.}
+\item{width, height}{CSS dimensions (e.g. '100\%', '400px') for the container.}
 }
 \value{
 A Shiny output binding for use in the UI.
@@ -23,7 +23,7 @@ if (interactive()) {
   library(rDeckgl)
 
   ui <- fluidPage(
-    deckglOutput("myDeckgl", width = "100\%", height = "600px")
+    deckglOutput("myDeckgl", height = "600px")
   )
 
   server <- function(input, output, session) {
