@@ -1,9 +1,6 @@
 # rDeckgl: Deck.gl for R
 
-R htmlwidget bindings for deck.gl, a WebGL-powered framework for visual
-exploratory data analysis of large datasets. Create interactive
-visualizations using deck.gl JSON specifications with server-side data
-hydration via DuckDB.
+TODO
 
 ## See also
 
@@ -16,3 +13,9 @@ Useful links:
 ## Author
 
 **Maintainer**: Timur Rizvanov <timurr@bu.edu>
+
+Authors:
+
+- Edward C. Ruiz <ecr7407@gmail.com>
+
+- Ruben Dries <rubendries@gmail.com> \[reviewer\]

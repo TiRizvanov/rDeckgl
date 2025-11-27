@@ -1,4 +1,4 @@
 # License
 
     YEAR: 2025
-    COPYRIGHT HOLDER: Dries Lab
+    COPYRIGHT HOLDER: rDeckgl authors
