@@ -15,369 +15,257 @@ knitr::opts_chunk$set(
 )
 ```
 
-## Introduction
+## Overview
 
-**rDeckgl** provides R bindings for [deck.gl](https://deck.gl) 9.2.2, a WebGL-powered framework for visualizing large datasets. This vignette demonstrates the basic usage of rDeckgl with working examples.
+**rDeckgl** provides R bindings for [deck.gl](https://deck.gl), a WebGL framework for visualizing large datasets. Key features:
+
+- **Zero-copy data transfer**: DuckDB exports Arrow IPC streams directly to the browser
+- **Efficient rendering**: WebGL-powered visualization handles millions of points
+- **GeoArrow support**: Native spatial data types (points, polygons, lines) with automatic WKB conversion
+- **Flexible specs**: Define visualizations using R lists, JSON, or YAML
+
+## Architecture
+
+The package uses a custom JavaScript bundle (`deckgl-bundle.js`) that combines:
+- `@deck.gl/core` and layer packages (standard + geo + GeoArrow)
+- `apache-arrow` for client-side Arrow decoding
+- Custom WKB→GeoArrow polygon converter (DuckDB exports WKB, deck.gl expects nested lists)
+
+Data flow:
+1. R writes data frames to in-memory DuckDB (or data already exists in DuckDB)
+2. SQL queries → `COPY ... (FORMAT ARROW)` exports binary Arrow IPC
+3. Browser fetches Arrow, decodes, renders via WebGL/deck.gl via geoarrow/deckgl-layers
+
+**Shiny vs Static**: 
+- **Static** (htmlwidgets): Arrow data embedded as Base64 in HTML (~33% size overhead)
+- **Shiny**: Arrow served as binary via `session$registerDataObj` (true zero-copy, no encoding)
+
+Use Shiny when data is large (>5MB) or needs reactivity. Use static for reports/documents.
 
 ## Installation
 
 ```{r install}
-# Install from GitHub
 remotes::install_github("TiRizvanov/rDeckgl")
 ```
 
-## Example 1: Basic Scatterplot
+## Quick Example
 
-This example demonstrates deck.gl rendering performance with ~10,000 points using a viridis color palette:
+Visualize 1000 random points:
 
 ```{r scatterplot}
 library(rDeckgl)
-library(scales)
+library(duckdb)
+library(DBI)
 
-# Generate a spaced-out grid of ~10K points around San Francisco
-set.seed(42)
-grid_size <- 100L
+con <- dbConnect(duckdb())
+dbExecute(con, "INSTALL spatial; LOAD spatial;")
 
-lon_seq <- seq(-122.515, -122.355, length.out = grid_size)
-lat_seq <- seq(37.70, 37.82, length.out = grid_size)
-grid <- expand.grid(lon = lon_seq, lat = lat_seq)
-grid$value <- rnorm(nrow(grid), mean = 0, sd = 1)
+dbExecute(con, "
+  CREATE TABLE points AS
+  SELECT
+    ST_Point(
+      -122.4 + (random() - 0.5) * 0.2,
+      37.76 + (random() - 0.5) * 0.2
+    )::POINT_2D as geometry
+  FROM range(1000)
+")
 
-# Add light jitter
-jitter_strength <- 0.0007
-grid$lon <- grid$lon + runif(nrow(grid), -jitter_strength, jitter_strength)
-grid$lat <- grid$lat + runif(nrow(grid), -jitter_strength, jitter_strength)
-grid$radius <- runif(nrow(grid), 25, 80)
-
-points_data <- grid
-
-# Map 'value' to viridis color palette
-domain_range <- range(points_data$value)
-palette_fun <- col_numeric(viridis_pal(option = "B")(256), domain_range)
-rgba <- col2rgb(palette_fun(points_data$value))
-points_data$color_r <- rgba[1, ]
-points_data$color_g <- rgba[2, ]
-points_data$color_b <- rgba[3, ]
+df <- dbGetQuery(con, "SELECT * FROM points")
+dbDisconnect(con)
 
 spec <- list(
-  `@@type` = "DeckGL",
-  initialViewState = list(
-    longitude = mean(range(points_data$lon)),
-    latitude = mean(range(points_data$lat)),
-    zoom = 11.5,
-    pitch = 20,
-    bearing = 0
-  ),
-  tooltip = list(
-    html = "<div><strong>Value:</strong> {value}<br/><strong>Radius:</strong> {radius} m</div>",
-    style = list(
-      backgroundColor = "#0e1119",
-      color = "#FFFFFF",
-      fontSize = "12px"
-    )
-  ),
-  views = list(
-    list(
-      `@@type` = "MapView",
-      controller = TRUE,
-      mapStyle = "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json"
-    )
-  ),
+  initialViewState = list(longitude = -122.4, latitude = 37.76, zoom = 11),
   layers = list(
     list(
-      `@@type` = "ScatterplotLayer",
-      id = "scatterplot",
+      `@@type` = "GeoArrowScatterplotLayer",
+      data = list(type = "duckdb", query = "SELECT geometry FROM points"),
+      getPosition = "@@col:geometry",
+      getFillColor = c(0, 150, 255),
+      getRadius = 50
+    )
+  )
+)
+
+deckgl(spec, data = list(points = df))
+```
+
+## Key Functionality
+
+### DuckDB Integration
+
+Use SQL to transform data before visualization:
+
+```{r duckdb_query}
+library(rDeckgl)
+library(duckdb)
+library(DBI)
+
+# Prepare data with spatial points
+con <- dbConnect(duckdb())
+dbExecute(con, "INSTALL spatial; LOAD spatial;")
+
+dbExecute(con, "
+  CREATE TABLE sales AS
+  SELECT
+    i as id,
+    random() * 100 as value,
+    ST_Point(-122.4 + random() * 0.3, 37.76 + random() * 0.2)::POINT_2D as geometry
+  FROM range(500) t(i)
+")
+
+# Use SQL to filter and scale - only high-value points
+df <- dbGetQuery(con, "SELECT * FROM sales WHERE value > 50")
+dbDisconnect(con)
+
+spec <- list(
+  initialViewState = list(longitude = -122.4, latitude = 37.86, zoom = 11),
+  layers = list(
+    list(
+      `@@type` = "GeoArrowScatterplotLayer",
       data = list(
         type = "duckdb",
-        query = "SELECT lon, lat, radius, value, color_r, color_g, color_b FROM points"
+        query = "SELECT geometry, value FROM sales WHERE value > 50"
       ),
-      getPosition = "@@=[lon, lat]",
-      getRadius = "@@=radius",
-      getFillColor = "@@=[color_r, color_g, color_b, 200]",
-      pickable = TRUE,
-      autoHighlight = TRUE,
-      radiusUnits = "meters"
+      getPosition = "@@col:geometry",
+      getFillColor = c(255, 50, 50),
+      getRadius = 100
     )
   )
 )
 
-deckgl(
-  spec = spec,
-  data = list(points = points_data),
-  width = "100%",
-  height = "600px"
-)
+deckgl(spec, data = list(sales = df))
 ```
 
-## Example 2: Hexagon Heatmap
+### Polygon Visualization
 
-This example uses remote data from the deck.gl website to create a 3D hexagon heatmap:
-
-```{r hexagon}
-library(rDeckgl)
-
-hexagon_spec <- list(
-  initialViewState = list(
-    longitude = -1.4157267858730052,
-    latitude = 52.232395363869415,
-    zoom = 6.6,
-    pitch = 40.5,
-    bearing = -27.396674584323023
-  ),
-  views = list(
-    list(
-      `@@type` = "MapView",
-      controller = TRUE,
-      mapStyle = "https://basemaps.cartocdn.com/gl/dark-matter-nolabels-gl-style/style.json"
-    )
-  ),
-  layers = list(
-    list(
-      `@@type` = "HexagonLayer",
-      id = "heatmap",
-      data = "https://raw.githubusercontent.com/visgl/deck.gl-data/master/examples/3d-heatmap/heatmap-data.csv",
-      coverage = 1,
-      pickable = TRUE,
-      elevationRange = c(0, 3000),
-      elevationScale = 50,
-      extruded = TRUE,
-      getPosition = "@@=[lng,lat]",
-      radius = 1000,
-      colorRange = list(
-        c(1, 152, 189),
-        c(73, 227, 206),
-        c(216, 254, 181),
-        c(254, 237, 177),
-        c(254, 173, 84),
-        c(209, 55, 78)
-      )
-    )
-  )
-)
-
-deckgl(
-  spec = hexagon_spec,
-  width = "100%",
-  height = "600px"
-)
-```
-
-## Example 3: Polygon Layer with Centroids
-
-This example demonstrates rendering polygons with centroids, useful for spatial data visualization like cell segmentation:
+Render polygons using native `POLYGON_2D` geometry:
 
 ```{r polygons}
 library(rDeckgl)
+library(duckdb)
+library(DBI)
 
-# Create synthetic cell polygon data
-set.seed(42)
-n_cells <- 150
+con <- dbConnect(duckdb())
+dbExecute(con, "INSTALL spatial; LOAD spatial;")
 
-# Generate random cell centroids
-cell_centroids <- data.frame(
-  cell_ID = sprintf("CELL_%03d", seq_len(n_cells)),
-  x = as.integer(runif(n_cells, 0, 10000)),
-  y = as.integer(runif(n_cells, -8000, 2000)),
-  expression = runif(n_cells, 0.2, 1)
-)
-
-# Build hexagon polygons around each centroid
-angle_offsets <- seq(0, by = 2 * pi / 6, length.out = 6)
-poly_list <- lapply(seq_len(n_cells), function(i) {
-  cx <- cell_centroids$x[i]
-  cy <- cell_centroids$y[i]
-  radius <- runif(1, 120, 260)
-  jitter <- runif(6, 0.85, 1.15)
-  coords <- data.frame(
-    x = as.integer(cx + radius * jitter * cos(angle_offsets)),
-    y = as.integer(cy + radius * jitter * sin(angle_offsets))
+# Create square polygons using native POLYGON_2D type
+dbExecute(con, "
+  CREATE TABLE zones AS
+  SELECT
+    ST_MakePolygon(
+      ST_MakeLine([
+        ST_Point(x, y),
+        ST_Point(x + 0.008, y),
+        ST_Point(x + 0.008, y + 0.008),
+        ST_Point(x, y + 0.008),
+        ST_Point(x, y)
+      ])
+    )::POLYGON_2D as geometry,
+    'Zone_' || i as id
+  FROM (
+    SELECT
+      i,
+      -122.45 + (i % 5) * 0.015 as x,
+      37.75 + floor(i / 5) * 0.01 as y
+    FROM range(10) t(i)
   )
-  coords <- rbind(coords, coords[1, , drop = FALSE])
-  c(
-    stats::setNames(as.list(coords$x), paste0("p", 0:6, "_x")),
-    stats::setNames(as.list(coords$y), paste0("p", 0:6, "_y"))
-  )
-})
+")
 
-cell_polygons <- data.frame(
-  cell_ID = cell_centroids$cell_ID,
-  do.call(rbind, poly_list)
-)
-
-# DuckDB query to construct polygon coordinates
-poly_query <- "SELECT
-  cell_ID,
-  list_value(
-    list_value(p0_x, p0_y),
-    list_value(p1_x, p1_y),
-    list_value(p2_x, p2_y),
-    list_value(p3_x, p3_y),
-    list_value(p4_x, p4_y),
-    list_value(p5_x, p5_y),
-    list_value(p6_x, p6_y)
-  ) AS polygon
-FROM cell_polygons"
+df <- dbGetQuery(con, "SELECT * FROM zones")
+dbDisconnect(con)
 
 spec <- list(
-  initialViewState = list(
-    target = c(4895.5, -4035, 0),
-    zoom = -1.3,
-    minZoom = -10,
-    maxZoom = 6
-  ),
-  views = list(
-    list(
-      `@@type` = "OrthographicView",
-      controller = TRUE,
-      flipY = TRUE
-    )
-  ),
+  initialViewState = list(longitude = -122.4, latitude = 37.754, zoom = 13),
   layers = list(
-    # Polygon layer for cell boundaries
     list(
-      `@@type` = "PolygonLayer",
-      id = "cell-polygons",
-      data = list(
-        type = "duckdb",
-        query = poly_query
-      ),
-      getPolygon = "@@=polygon",
-      positionFormat = "XY",
-      filled = TRUE,
-      stroked = TRUE,
-      getFillColor = c(66, 135, 245, 120),
-      getLineColor = c(25, 64, 155, 200),
-      lineWidthMinPixels = 1,
-      pickable = TRUE,
-      coordinateSystem = "@@#COORDINATE_SYSTEM.CARTESIAN",
-      coordinateOrigin = c(0, 0, 0)
-    ),
-    # Scatterplot layer for cell centroids
-    list(
-      `@@type` = "ScatterplotLayer",
-      id = "cell-centroids",
-      data = list(
-        type = "duckdb",
-        query = "SELECT cell_ID, x, y, expression FROM cell_centroids"
-      ),
-      getPosition = "@@=[x, y]",
-      positionFormat = "XY",
-      getRadius = "@@=[expression * 120]",
-      radiusUnits = "common",
-      radiusMinPixels = 1,
-      radiusMaxPixels = 3,
-      getFillColor = "@@=[50, 205, 50, 200]",
-      pickable = TRUE,
-      coordinateSystem = "@@#COORDINATE_SYSTEM.CARTESIAN",
-      coordinateOrigin = c(0, 0, 0)
+      `@@type` = "GeoArrowSolidPolygonLayer",
+      data = list(type = "duckdb", query = "SELECT geometry FROM zones"),
+      getPolygon = "@@col:geometry",
+      getFillColor = c(0, 200, 100, 150),
+      getLineColor = c(0, 100, 50),
+      lineWidthMinPixels = 2
     )
   )
 )
 
-deckgl(
-  spec = spec,
-  data = list(
-    cell_polygons = cell_polygons,
-    cell_centroids = cell_centroids
-  ),
-  width = "100%",
-  height = "600px"
-)
+deckgl(spec, data = list(zones = df))
 ```
 
-## Data Hydration with DuckDB
-
-rDeckgl automatically creates an in-memory DuckDB database for efficient data handling:
-
-1. Pass a named list of data.frames via the `data` argument
-2. Each entry becomes a DuckDB table
-3. Reference tables using `type = "duckdb"` and SQL queries in your spec
-4. Use DuckDB's powerful SQL features for data transformation
+**Note**: Use native `POLYGON_2D` type with `ST_MakePolygon()` and `ST_MakeLine()` for proper GeoArrow polygon rendering. The WKB format from `ST_GeomFromText()` has compatibility issues.
 
 ## Shiny Integration
 
-Use rDeckgl in Shiny applications with reactive bindings. Here's a complete working example:
+Shiny apps use binary Arrow streaming (no Base64 encoding):
 
 ```{r shiny, eval=FALSE}
 library(shiny)
 library(rDeckgl)
-library(scales)
+library(duckdb)
+library(DBI)
 
 ui <- fluidPage(
-  titlePanel("Deck.gl in Shiny"),
-  deckglOutput("myDeckgl", width = "100%", height = "600px")
+  sliderInput("n", "Number of points:", 100, 5000, 1000, step = 100),
+  deckglOutput("map", height = "600px")
 )
 
 server <- function(input, output, session) {
-  output$myDeckgl <- renderDeckgl({
-    # Generate sample data
-    set.seed(42)
-    n_points <- 500
+  output$map <- renderDeckgl({
+    # Generate spatial points
+    con <- dbConnect(duckdb())
+    dbExecute(con, "INSTALL spatial; LOAD spatial;")
 
-    points_data <- data.frame(
-      lon = runif(n_points, -122.5, -122.3),
-      lat = runif(n_points, 37.7, 37.85),
-      value = rnorm(n_points),
-      radius = runif(n_points, 50, 150)
-    )
+    dbExecute(con, sprintf("
+      CREATE TABLE pts AS
+      SELECT
+        ST_Point(
+          -122.4 + (random() - 0.5) * 0.2,
+          37.78 + (random() - 0.5) * 0.15
+        )::POINT_2D as geometry
+      FROM range(%d)
+    ", input$n))
 
-    # Add colors
-    palette_fun <- col_numeric(viridis_pal(option = "B")(256), range(points_data$value))
-    rgba <- col2rgb(palette_fun(points_data$value))
-    points_data$color_r <- rgba[1, ]
-    points_data$color_g <- rgba[2, ]
-    points_data$color_b <- rgba[3, ]
+    df <- dbGetQuery(con, "SELECT * FROM pts")
+    dbDisconnect(con)
 
-    # Create spec
     spec <- list(
-      `@@type` = "DeckGL",
-      initialViewState = list(
-        longitude = -122.4,
-        latitude = 37.78,
-        zoom = 11,
-        pitch = 0,
-        bearing = 0
-      ),
-      views = list(
-        list(
-          `@@type` = "MapView",
-          controller = TRUE,
-          mapStyle = "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json"
-        )
-      ),
+      initialViewState = list(longitude = -122.4, latitude = 37.78, zoom = 11),
       layers = list(
         list(
-          `@@type` = "ScatterplotLayer",
-          id = "points",
-          data = list(
-            type = "duckdb",
-            query = "SELECT lon, lat, radius, color_r, color_g, color_b FROM points"
-          ),
-          getPosition = "@@=[lon, lat]",
-          getRadius = "@@=radius",
-          getFillColor = "@@=[color_r, color_g, color_b, 180]",
-          pickable = TRUE,
-          radiusUnits = "meters"
+          `@@type` = "GeoArrowScatterplotLayer",
+          data = list(type = "duckdb", query = "SELECT geometry FROM pts"),
+          getPosition = "@@col:geometry",
+          getFillColor = c(255, 100, 0),
+          getRadius = 60
         )
       )
     )
 
-    deckgl(spec = spec, data = list(points = points_data))
+    deckgl(spec, data = list(pts = df))
   })
 }
 
 shinyApp(ui, server)
 ```
 
-**Note:** This example generates data within the server function. For reactive/dynamic visualizations, wrap your data generation in `reactive()` and use `observe()` or `observeEvent()` to update the visualization based on user input.
+## Advanced: Custom Bundle Modifications
 
-## Next Steps
+The `deckgl-bundle.js` includes three key customizations:
 
-- Explore the `examples/` directory for more advanced use cases:
-  - `basic_scatterplot.R` - High-density point visualization
-  - `hexagon_heatmap.R` - 3D hexagon aggregation
-  - `polygon_layer.R` - Cell segmentation visualization
-  - `giotto_geometries.R` - Giotto spatial data integration
-  - `giotto_wkb_polygons.R` - WKB polygon rendering
-- Read the [deck.gl documentation](https://deck.gl/docs) for all layer types
-- Check the [rDeckgl GitHub](https://github.com/TiRizvanov/rDeckgl) for updates
+1. **WKB→GeoArrow Polygon Converter**: DuckDB's `ST_AsWKB()` outputs binary blobs. GeoArrow layers expect `List<List<FixedSizeList<2, Float64>>>`. The bundle includes a runtime converter that:
+   - Parses WKB geometry type and offsets
+   - Allocates Arrow buffers for polygon/ring/point hierarchy
+   - Constructs typed Arrow vectors with proper metadata
+
+2. **Geometry Metadata Patching**: DuckDB's Arrow export omits `ARROW:extension:name` metadata. The bundle detects binary/list columns named `geometry` and infers types:
+   - Binary → `geoarrow.wkb`
+   - List → `geoarrow.polygon`
+
+3. **Unified Layer Export**: Merges `@deck.gl/layers`, `@deck.gl/geo-layers`, and `@geoarrow/deck.gl-layers` into single `window.rDeckgl.Layers` namespace for consistent R access.
+
+These modifications enable seamless spatial data visualization without manual geometry conversion in R.
+
+## Further Reading
+
+- [deck.gl Layer Catalog](https://deck.gl/docs/api-reference/layers)
+- [DuckDB Spatial Extension](https://duckdb.org/docs/extensions/spatial)
+- [GeoArrow Specification](https://github.com/geoarrow/geoarrow)

@@ -13,62 +13,34 @@ deckgl(
 )
 }
 \arguments{
-\item{spec}{Deck.gl specification as an R list, JSON text, JSON file path,
-YAML text, or YAML file path.}
+\item{spec}{A Deck.gl specification. Can be a list, JSON string, YAML string, or file path.}
 
-\item{specType}{One of "auto" (default), "json", or "yaml". Auto-detection
-attempts to infer the format from the input.}
+\item{specType}{Format of the spec: "auto" (default), "json", or "yaml". Auto-detection is used by default.}
 
-\item{data}{Named list of data.frames to register in DuckDB. These tables
-can be referenced in the spec using `type = "duckdb"` data nodes.}
+\item{data}{Optional named list of data frames to register in DuckDB for querying in the spec.}
 
-\item{width}{CSS or pixel width (e.g. "100\%", "600px", or numeric).}
+\item{width}{Width of the widget (optional, auto-detected in Shiny).}
 
-\item{height}{CSS or pixel height (e.g. "100\%", "600px", or numeric).}
+\item{height}{Height of the widget (optional, auto-detected in Shiny).}
 }
 \value{
-An htmlwidget that renders the Deck.gl visualization.
+An htmlwidget object for rendering a Deck.gl visualization.
 }
 \description{
-Creates an interactive deck.gl visualization from a JSON or YAML specification.
-Supports server-side data hydration via DuckDB for efficient data handling.
+Render a Deck.gl visualization
 }
 \examples{
-if (interactive()) {
-  # Simple scatterplot with inline data
-  spec <- list(
-    `@type` = "DeckGL",
-    initialViewState = list(
-      longitude = -122.4,
-      latitude = 37.76,
-      zoom = 12,
-      pitch = 0,
-      bearing = 0
-    ),
-    layers = list(
-      list(
-        `@type` = "ScatterplotLayer",
-        id = "scatterplot",
-        data = list(
-          type = "duckdb",
-          query = "SELECT lon, lat, radius FROM points"
-        ),
-        getPosition = "@=[lon, lat]",
-        getRadius = "@=radius",
-        getFillColor = c(255, 0, 0)
-      )
+\dontrun{
+# Create a simple scatterplot layer
+spec <- list(
+  initialViewState = list(longitude = -122.4, latitude = 37.8, zoom = 11),
+  layers = list(
+    list(
+      "@type" = "ScatterplotLayer",
+      data = list(list(position = c(-122.4, 37.8)))
     )
   )
-
-  data <- list(
-    points = data.frame(
-      lon = c(-122.4, -122.45, -122.35),
-      lat = c(37.76, 37.78, 37.74),
-      radius = c(100, 150, 200)
-    )
-  )
-
-  deckgl(spec = spec, data = data)
+)
+deckgl(spec)
 }
-
 }

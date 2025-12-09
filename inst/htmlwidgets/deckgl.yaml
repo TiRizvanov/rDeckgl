@@ -1,6 +1,6 @@
 dependencies:
   - name: deckgl-bundle
-    version: 9.1.15
+    version: 9.0.0
     src: htmlwidgets/lib/deckgl
     script: deckgl-bundle.js
     stylesheet: deckgl-widgets.css

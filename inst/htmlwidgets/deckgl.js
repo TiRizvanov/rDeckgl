@@ -1,290 +1,392 @@
-// deckgl.js - Deck.gl htmlwidget for R
-
-// Helper function to decode base64 to Uint8Array
-function base64ToUint8Array(base64) {
-  try {
-    const binary_string = atob(base64);
-    const len = binary_string.length;
-    const bytes = new Uint8Array(len);
-    for (let i = 0; i < len; i++) {
-      bytes[i] = binary_string.charCodeAt(i);
-    }
-    return bytes;
-  } catch (e) {
-    console.error("[deckgl] Failed to decode base64 string:", base64.substring(0, 100) + "...", e);
-    throw e;
-  }
-}
-
-const deckGlModule = { promise: null };
-
-async function ensureDeckGlModules() {
-  if (!deckGlModule.promise) {
-    deckGlModule.promise = (async () => {
-      const deck = window.deck;
-      if (!deck || !deck.Deck) {
-        throw new Error('Deck.gl libraries are not loaded. Ensure deckgl-bundle dependency is registered.');
-      }
-
-      const JSONConverter = deck.JSONConverter || (window.deck__json && window.deck__json.JSONConverter);
-      const JSONConfiguration = deck.JSONConfiguration || (window.deck__json && window.deck__json.JSONConfiguration);
-
-      if (!JSONConverter || !JSONConfiguration) {
-        throw new Error('Deck.gl JSONConverter is unavailable. Ensure @deck.gl/json is accessible via deckgl-bundle.');
-      }
-
-      const loadersGlobal = window.loaders;
-      const csvLoader = window.CSVLoader || (loadersGlobal && loadersGlobal.CSVLoader);
-      if (loadersGlobal && typeof loadersGlobal.registerLoaders === 'function' && csvLoader) {
-        try {
-          loadersGlobal.registerLoaders(csvLoader);
-        } catch (err) {
-          console.warn('[deckgl] Failed to register CSVLoader:', err);
-        }
-      }
-
-      return { deck, JSONConverter, JSONConfiguration };
-    })();
-  }
-  return deckGlModule.promise;
-}
-
-function collectDeckGlTokens(spec) {
-  const classNames = new Set();
-  const enumNames = new Set();
-
-  const walk = (node) => {
-    if (node === null || node === undefined) return;
-    if (Array.isArray(node)) {
-      node.forEach(walk);
-      return;
-    }
-    if (typeof node === 'object') {
-      if (typeof node['@@type'] === 'string') {
-        classNames.add(node['@@type']);
-      }
-      Object.keys(node).forEach((key) => walk(node[key]));
-      return;
-    }
-    if (typeof node === 'string' && node.startsWith('@@#')) {
-      const enumToken = node.slice(3);
-      const enumName = enumToken.split('.')[0];
-      if (enumName) enumNames.add(enumName);
-    }
-  };
-
-  walk(spec);
-  return {
-    classNames: Array.from(classNames),
-    enumNames: Array.from(enumNames)
-  };
-}
-
-function resolveDeckExport(deck, name) {
-  if (!deck || typeof name !== 'string') return null;
-  if (deck[name]) return deck[name];
-  if (name === 'DeckGL' && deck.Deck) return deck.Deck;
-  for (const key of Object.keys(deck)) {
-    const candidate = deck[key];
-    if (candidate && typeof candidate === 'object' && candidate[name]) {
-      return candidate[name];
-    }
-  }
-  return null;
-}
-
-async function renderDeckGlView(el, payload) {
-  const { deck, JSONConverter, JSONConfiguration } = await ensureDeckGlModules();
-  const spec = payload.spec || {};
-  const { classNames, enumNames } = collectDeckGlTokens(spec);
-
-  const classes = {};
-  classNames.forEach((name) => {
-    const resolved = resolveDeckExport(deck, name);
-    if (resolved) {
-      classes[name] = resolved;
-    } else {
-      console.warn(`[deckgl] Missing class binding for ${name}.`);
-    }
-  });
-
-  const enumerations = {};
-  enumNames.forEach((name) => {
-    const resolved = resolveDeckExport(deck, name);
-    if (resolved) {
-      enumerations[name] = resolved;
-    } else if (deck[name]) {
-      enumerations[name] = deck[name];
-    } else {
-      console.warn(`[deckgl] Missing enumeration binding for ${name}.`);
-    }
-  });
-
-  const configuration = new JSONConfiguration({
-    classes,
-    enumerations
-  });
-
-  const converter = new JSONConverter({ configuration });
-  const clonedSpec = JSON.parse(JSON.stringify(spec));
-  const props = converter.convert(clonedSpec) || {};
-
-  if (!props.parent) {
-    props.parent = el;
-  }
-
-  const hasViewState =
-    (props && (props.initialViewState || props.viewState)) ||
-    (Array.isArray(props.views) &&
-      props.views.some((view) => view && (view.initialViewState || view.viewState)));
-
-  if (typeof props.controller === 'undefined') {
-    props.controller = Boolean(hasViewState);
-  } else if (props.controller && !hasViewState) {
-    console.warn('[deckgl] Controller requested but no view state supplied; disabling controller.');
-    props.controller = false;
-  }
-  if (!props.container) {
-    props.container = el;
-  }
-
-  // Add default tooltip handler if not provided
-  if (!props.getTooltip) {
-    props.getTooltip = (info) => {
-      if (!info.object) return null;
-      const props = [];
-      for (const [key, value] of Object.entries(info.object)) {
-        if (key !== 'geometry' && key !== 'polygon' && value !== null && value !== undefined) {
-          props.push(`${key}: ${value}`);
-        }
-      }
-      return props.length > 0 ? {
-        html: `<div style="background: rgba(0,0,0,0.8); color: white; padding: 8px; border-radius: 4px; font-family: monospace; font-size: 12px;">${props.join('<br>')}</div>`
-      } : null;
-    };
-  }
-
-  el.classList.add('deckgl-view');
-  el.style.position = 'relative';
-  el.style.width = '100%';
-  el.style.height = '100%';
-  el.style.margin = '0';
-  el.style.padding = '0';
-
-  if (el.__deckInstance) {
-    console.log('[deckgl] Updating existing Deck instance with new props');
-    // Only update, don't recreate
-    try {
-      el.__deckInstance.setProps(props);
-      // Force a redraw to ensure updates are applied
-      el.__deckInstance.redraw();
-    } catch (err) {
-      console.error('[deckgl] Failed to update Deck instance:', err);
-      // If update fails, recreate
-      el.__deckInstance.finalize();
-      delete el.__deckInstance;
-      el.innerHTML = '';
-      el.__deckInstance = new deck.Deck(props);
-    }
-  } else {
-    console.log('[deckgl] Creating new Deck instance');
-    el.innerHTML = '';
-    try {
-      el.__deckInstance = new deck.Deck(props);
-    } catch (err) {
-      console.error('[deckgl] Failed to create Deck instance:', err);
-      throw err;
-    }
-  }
-}
-
 HTMLWidgets.widget({
-  name: "deckgl",
-  type: "output",
+  name: 'deckgl',
+  type: 'output',
+
   factory: function(el, width, height) {
-    console.log("[deckgl] — factory() called — element, size:", el, width, height);
-    const pending = {};
-    let widgetIdInstance = null;
-    let handlerRegistered = false;
+    let deckInstance = null;
+    let deckContainer = null;
 
-    function shinyConnector(wid) {
-      return {
-        query: function(q) {
-          console.log(`[deckgl][${wid}] → shinyConnector sending query:`, q);
-          return new Promise((resolve, reject) => {
-            const reqId = "q" + Math.random().toString(36).substr(2, 9);
-            pending[reqId] = { resolve, reject, queryType: q.type || "json" };
-            Shiny.setInputValue(
-              `${wid}_deckgl_query`,
-              { request: reqId, sql: q.sql, type: q.type || "json" },
-              { priority: "event" }
-            );
-          });
+    // RECURSIVE DECODER (ASYNC)
+    // Walks the spec looking for our special __arrow_ipc_base64__ or __arrow_url__ flags
+    async function resolveData(node) {
+      if (Array.isArray(node)) return Promise.all(node.map(resolveData));
+      
+      if (node && typeof node === 'object') {
+        let table = null;
+
+        // CASE A: Static Base64
+        if (node.type === '__arrow_ipc_base64__' && node.payload) {
+          const binaryString = atob(node.payload);
+          const bytes = new Uint8Array(binaryString.length);
+          for (let i = 0; i < binaryString.length; i++) {
+            bytes[i] = binaryString.charCodeAt(i);
+          }
+          const Arrow = window.rDeckgl.Arrow;
+          table = Arrow.tableFromIPC(bytes);
         }
-      };
-    }
-
-    function registerHandler(wid) {
-      if (handlerRegistered) {
-        console.log(`[deckgl][${wid}] Handler already registered.`);
-        return;
-      }
-      Shiny.addCustomMessageHandler(`${wid}_deckgl_response`, message => {
-        console.log(`[deckgl][${wid}] ← shinyConnector received response:`, message);
-        const cbEntry = pending[message.request];
-        if (!cbEntry) {
-          console.warn(`[deckgl][${wid}] Received response for unknown request:`, message.request);
-          return;
-        }
-
-        if (message.error) {
-          console.error(`[deckgl][${wid}] Error from Shiny for request ${message.request}:`, message.error);
-          cbEntry.reject(new Error(message.error));
-        } else {
-          cbEntry.resolve(message.data);
-        }
-        delete pending[message.request];
-      });
-      handlerRegistered = true;
-      console.log(`[deckgl][${wid}] ✓ Custom message handler registered.`);
-    }
-
-    const widgetInstance = {
-      renderValue: async function(x) {
-        widgetIdInstance = x.widgetId;
-        const wid = widgetIdInstance;
-
-        console.log(`[deckgl][${wid}] — renderValue() invoked:`, x);
-
-        if (!handlerRegistered && typeof Shiny !== 'undefined') {
-          registerHandler(wid);
-        }
-
-        // Store the current spec for potential updates
-        el.__lastSpec = x;
-
-        try {
-          await renderDeckGlView(el, x);
-        } catch (err) {
-          console.error(`[deckgl][${wid}] Deck.gl rendering failed:`, err);
-          el.innerHTML = `<div style="color:red; padding:10px; font-family:sans-serif;">
-            <h4>Deck.gl Rendering Error</h4>
-            <p><strong>Message:</strong> ${err.message || err}</p>
-          </div>`;
-        }
-      },
-      resize: function(w, h) {
-        const wid = widgetIdInstance;
-        console.log(`[deckgl][${wid || 'unknown'}] — resize() called: ${w}×${h}.`);
-        if (el.__deckInstance) {
+        // CASE B: Shiny Binary URL
+        else if (node.type === '__arrow_url__' && node.url) {
           try {
-            el.__deckInstance.setProps({ width: w, height: h });
-          } catch (err) {
-            console.warn(`[deckgl][${wid || 'unknown'}] Deck.gl resize failed:`, err);
+             const response = await fetch(node.url);
+             const arrayBuffer = await response.arrayBuffer();
+             const Arrow = window.rDeckgl.Arrow;
+             table = Arrow.tableFromIPC(new Uint8Array(arrayBuffer));
+          } catch (e) {
+             console.error("[deckgl] Failed to fetch Arrow data:", e);
           }
         }
+
+        if (table) {
+          // Patch geometry column metadata if missing (DuckDB IPC fallback)
+          try {
+             const schema = table.schema;
+             const geometryField = schema.fields.find(f => f.name === 'geometry');
+             if (geometryField) {
+                const typeId = geometryField.type.typeId;
+                let extensionName = null;
+                
+                // Binary -> WKB
+                if (typeId === 4 || typeId === 15 || typeId === 16) {
+                    extensionName = 'geoarrow.wkb';
+                } 
+                // List -> Polygon (Assumption for now, could be MultiPolygon)
+                else if (typeId === 12 || typeId === 19) {
+                    extensionName = 'geoarrow.polygon';
+                }
+
+                if (extensionName) {
+                    if (!geometryField.metadata) {
+                       geometryField.metadata = new Map();
+                    }
+                    if (!geometryField.metadata.get('ARROW:extension:name')) {
+                       geometryField.metadata.set('ARROW:extension:name', extensionName);
+                    }
+                }
+             }
+          } catch (e) {
+             console.warn("[deckgl] Failed to patch Arrow schema:", e);
+          }
+
+          return table;
+        }
+
+        const result = {};
+        // Wait for all keys to resolve
+        const keys = Object.keys(node);
+        for (const key of keys) {
+          result[key] = await resolveData(node[key]);
+        }
+        return result;
+      }
+      return node;
+    }
+
+    // Helper to transpose column-oriented data (R default) to row-oriented (Deck.gl default)
+    function transposeDataFrame(data) {
+        if (Array.isArray(data)) return data;
+        if (typeof data !== 'object' || data === null) return data;
+        
+        const keys = Object.keys(data);
+        if (keys.length === 0) return [];
+        
+        // Check if first value is an array
+        if (!Array.isArray(data[keys[0]])) return data;
+
+        const length = data[keys[0]].length;
+        
+        // Check if all values are arrays of same length
+        for (const key of keys) {
+            if (!Array.isArray(data[key]) || data[key].length !== length) {
+                return data; // Not a consistent dataframe
+            }
+        }
+        
+        // Transpose
+        const rows = new Array(length);
+        for (let i = 0; i < length; i++) {
+            const row = {};
+            for (const key of keys) {
+                row[key] = data[key][i];
+            }
+            rows[i] = row;
+        }
+        return rows;
+    }
+
+    // WKB to Arrow Polygon Vector Converter
+    function wkbToPolygonVector(binaryVector) {
+        const Arrow = window.rDeckgl.Arrow;
+        
+        let totalPolys = binaryVector.length;
+        let totalRings = 0;
+        let totalPoints = 0;
+        
+        // Pass 1: Count
+        for (let i = 0; i < totalPolys; i++) {
+            const wkb = binaryVector.get(i); // Uint8Array
+            if (!wkb) continue; 
+            
+            const view = new DataView(wkb.buffer, wkb.byteOffset, wkb.byteLength);
+            const littleEndian = view.getUint8(0) === 1;
+            const type = view.getUint32(1, littleEndian);
+            
+            if (type !== 3) { // Polygon (3)
+                 // TODO: Handle MultiPolygon (6)
+                 console.warn("Not a polygon WKB (type " + type + ")");
+                 continue;
+            }
+            
+            const numRings = view.getUint32(5, littleEndian);
+            totalRings += numRings;
+            
+            let offset = 9;
+            for (let r = 0; r < numRings; r++) {
+                const numPoints = view.getUint32(offset, littleEndian);
+                totalPoints += numPoints;
+                offset += 4 + (numPoints * 16);
+            }
+        }
+        
+        // Allocate
+        const polyOffsets = new Int32Array(totalPolys + 1);
+        const ringOffsets = new Int32Array(totalRings + 1);
+        const coords = new Float64Array(totalPoints * 2);
+        
+        let currentPolyOffset = 0;
+        let currentRingOffset = 0;
+        let currentCoordIndex = 0;
+        
+        polyOffsets[0] = 0;
+        ringOffsets[0] = 0;
+        
+        // Pass 2: Fill
+        let ringIndex = 0;
+        
+        for (let i = 0; i < totalPolys; i++) {
+            const wkb = binaryVector.get(i);
+            if (!wkb) {
+                 polyOffsets[i+1] = polyOffsets[i];
+                 continue;
+            }
+            
+            const view = new DataView(wkb.buffer, wkb.byteOffset, wkb.byteLength);
+            const littleEndian = view.getUint8(0) === 1;
+            const numRings = view.getUint32(5, littleEndian);
+            
+            let offset = 9;
+            for (let r = 0; r < numRings; r++) {
+                const numPoints = view.getUint32(offset, littleEndian);
+                offset += 4;
+                
+                for (let p = 0; p < numPoints; p++) {
+                    coords[currentCoordIndex++] = view.getFloat64(offset, littleEndian);
+                    coords[currentCoordIndex++] = view.getFloat64(offset + 8, littleEndian);
+                    offset += 16;
+                }
+                
+                currentRingOffset += numPoints;
+                ringOffsets[++ringIndex] = currentRingOffset;
+            }
+            
+            currentPolyOffset += numRings;
+            polyOffsets[i+1] = currentPolyOffset;
+        }
+        
+        // Construct Arrow Data
+        // Point: FixedSizeList<2, Float64>
+        const pointDataType = new Arrow.FixedSizeList(2, new Arrow.Field('xy', new Arrow.Float64()));
+        const pointData = Arrow.makeData({
+            type: pointDataType,
+            length: totalPoints,
+            child: Arrow.makeData({
+                type: new Arrow.Float64(),
+                length: totalPoints * 2,
+                data: coords
+            })
+        });
+        
+        // Ring: List<Point>
+        const ringDataType = new Arrow.List(new Arrow.Field('points', pointDataType));
+        const ringData = Arrow.makeData({
+            type: ringDataType,
+            length: totalRings,
+            valueOffsets: ringOffsets,
+            child: pointData
+        });
+        
+        // Polygon: List<Ring>
+        const polyDataType = new Arrow.List(new Arrow.Field('rings', ringDataType));
+        
+        const polyData = Arrow.makeData({
+            type: polyDataType,
+            length: totalPolys,
+            valueOffsets: polyOffsets,
+            child: ringData
+        });
+        
+        const vec = Arrow.makeVector(polyData);
+        // Manually set extension name on the vector's type if possible, or rely on the data
+        // GeoArrow layers check the type of the vector.
+        // We need to ensure the schema/field has the metadata.
+        // But makeVector creates a vector with a type.
+        // We can wrap it?
+        return vec;
+    }
+
+    return {
+      renderValue: function(x) {
+        // Safety check: ensure el is a valid DOM node
+        if (!el || !el.appendChild) {
+          console.error("[deckgl] Invalid container element");
+          return;
+        }
+        
+        // 1. Use or create a stable container div for deck.gl (Synchronous)
+        // This prevents deck.gl from interfering with htmlwidgets' MutationObserver
+        if (!deckContainer) {
+             // Check if there's already a child div (Shiny creates one)
+             if (el.children.length > 0 && el.children[0].tagName === 'DIV') {
+                 deckContainer = el.children[0];
+             } else {
+                 deckContainer = document.createElement('div');
+                 deckContainer.style.width = '100%';
+                 deckContainer.style.height = '100%';
+                 deckContainer.style.position = 'relative';
+                 el.appendChild(deckContainer);
+             }
+        }
+        
+        // 2. Initialize Deck immediately if needed (Synchronous)
+        if (!deckInstance) {
+             try {
+                 const initialProps = {
+                     parent: deckContainer,  // Use 'parent' instead of 'container' to ensure canvas is appended
+                     width: width,
+                     height: height,
+                     useDevicePixels: true,
+                     onError: (e) => console.error("[deckgl] Deck error:", e),
+                     // Extract initialViewState if present
+                     initialViewState: x.spec.initialViewState,
+                     controller: x.spec.controller,
+                     layers: [] // Start with empty layers
+                 };
+                 deckInstance = new window.rDeckgl.Deck(initialProps);
+             } catch (e) {
+                 console.error("[deckgl] Init error:", e);
+             }
+        }
+
+        // 3. Convert Spec to Deck Props (Async)
+        resolveData(x.spec).then(resolvedSpec => {
+             
+             // Map layer strings to actual classes
+             if (resolvedSpec.layers) {
+                resolvedSpec.layers = resolvedSpec.layers.map(layerSpec => {
+                   // e.g. "GeoArrowScatterplotLayer"
+                   const layerType = layerSpec['@@type'];
+                   const LayerClass = window.rDeckgl.Layers[layerType];
+                   
+                   if(!LayerClass) {
+                     console.error("Unknown layer:", layerType);
+                     return null;
+                   }
+
+                   const { '@@type': _, ...props } = layerSpec;
+                   
+                   // Transpose data if needed
+                   if (props.data) {
+                       props.data = transposeDataFrame(props.data);
+                   }
+
+                   // Resolve Column Accessors (e.g. "@@col:geometry")
+                   // This allows passing Arrow Vectors directly to GeoArrow layers
+                   if (props.data && typeof props.data.getChild === 'function') {
+                       for (const key in props) {
+                           if (typeof props[key] === 'string' && props[key].startsWith('@@col:')) {
+                               const colName = props[key].substring(6);
+                               let col = props.data.getChild(colName);
+                               if (col) {
+                                   // Check if it is a binary column (WKB)
+                                   // In Apache Arrow JS, Binary is typeId 4, LargeBinary is 15, FixedSizeBinary is 16
+                                   const typeId = col.typeId !== undefined ? col.typeId : (col.type ? col.type.typeId : undefined);
+
+                                   if (layerType === 'GeoArrowSolidPolygonLayer' && (typeId === 4 || typeId === 15 || typeId === 16)) { 
+                                       try {
+                                           col = wkbToPolygonVector(col);
+                                       } catch (e) {
+                                           console.error("[deckgl] WKB conversion failed:", e);
+                                       }
+                                   }
+                                   
+                                   props[key] = col;
+                               } else {
+                                   console.warn(`[deckgl] Column accessor ${key} failed: column ${colName} not found.`);
+                               }
+                           }
+                       }
+                   }
+
+                   // Special handling for GeoJsonLayer with Arrow Data (from DuckDB ST_AsGeoJSON)
+                   if (layerType === 'GeoJsonLayer' && props.data && props.data.schema) {
+                       const table = props.data;
+                       const features = [];
+                       
+                       // Find geometry column (assume 'geometry' or first column)
+                       let geomColName = 'geometry';
+                       if (!table.getChild(geomColName)) {
+                           geomColName = table.schema.fields[0].name;
+                       }
+                       const geomCol = table.getChild(geomColName);
+                       
+                       if (geomCol) {
+                           for(let i=0; i<table.numRows; i++) {
+                               const geomStr = geomCol.get(i);
+                               let geom = null;
+                               try {
+                                   geom = JSON.parse(geomStr);
+                               } catch(e) {
+                                   console.warn("Failed to parse GeoJSON geometry at row " + i, e);
+                                   continue;
+                               }
+                               
+                               const properties = {};
+                               table.schema.fields.forEach(f => {
+                                   if (f.name !== geomColName) {
+                                       properties[f.name] = table.getChild(f.name).get(i);
+                                   }
+                               });
+                               
+                               features.push({
+                                   type: "Feature",
+                                   geometry: geom,
+                                   properties: properties
+                               });
+                           }
+                           props.data = features;
+                       } else {
+                           console.warn("[deckgl] No geometry column found for GeoJsonLayer conversion.");
+                       }
+                   }
+
+                   return new LayerClass(props);
+                }).filter(l => l);
+             }
+             
+             // 4. Update Deck
+             if (deckInstance) {
+                deckInstance.setProps(resolvedSpec);
+             }
+
+        }).catch(e => {
+            console.error("[deckgl] Error resolving spec:", e);
+        });
+      },
+
+      resize: function(width, height) {
+        if (deckInstance) {
+          deckInstance.setProps({ width, height });
+        }
       }
     };
-    return widgetInstance;
   }
 });

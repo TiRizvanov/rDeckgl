@@ -10,12 +10,11 @@ Authors@R: c(
     person("Ruben", "Dries", email = "rubendries@gmail.com",
            role = c("aut", "rev"))
   )
-Description: TODO
+Description: Provides an R interface to 'deck.gl', a WebGL-powered framework for visual exploratory data analysis of large datasets. Enables high-performance rendering of Arrow IPC streams directly from 'DuckDB' to the browser.
 License: MIT + file LICENSE
 URL: https://github.com/TiRizvanov/rDeckgl
 BugReports: https://github.com/TiRizvanov/rDeckgl/issues
 Encoding: UTF-8
-LazyData: true
 RoxygenNote: 7.3.3
 Depends:
     R (>= 4.1.0)
@@ -26,9 +25,9 @@ Imports:
     yaml (>= 2.3.0),
     DBI (>= 1.1.0),
     duckdb (>= 1.4.0),
-    stats
+    base64enc,
+    digest
 Suggests:
-    arrow (>= 12.0.0),
     knitr,
     rmarkdown
 VignetteBuilder: knitr

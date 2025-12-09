@@ -6,7 +6,7 @@
 \alias{rDeckgl-package}
 \title{rDeckgl: Deck.gl for R}
 \description{
-TODO
+Provides an R interface to 'deck.gl', a WebGL-powered framework for visual exploratory data analysis of large datasets. Enables high-performance rendering of Arrow IPC streams directly from 'DuckDB' to the browser.
 }
 \seealso{
 Useful links:

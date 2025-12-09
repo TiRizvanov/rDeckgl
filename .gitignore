@@ -24,3 +24,11 @@ pkgdown/
 vignettes/*.html
 vignettes/*.pdf
 inst/doc/
+
+# Development directories (not for CRAN)
+scratch/
+.playwright-mcp/
+
+# JavaScript build artifacts
+node_modules/
+*.js.map
