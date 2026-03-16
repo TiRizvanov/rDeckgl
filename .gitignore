@@ -27,3 +27,9 @@ inst/doc/
 
 # Examples folder (local only)
 Examples/
+
+# Local benchmark artifacts
+.RDataTmp
+*.db
+*.duckdb
+*.sqlite
