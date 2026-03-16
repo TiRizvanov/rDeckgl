@@ -11,6 +11,7 @@ deckgl(
   spec,
   specType = c("auto", "json", "yaml"),
   data = NULL,
+  con = NULL,
   width = NULL,
   height = NULL
 )
@@ -32,6 +33,13 @@ deckgl(
 
   Named list of data.frames to register in DuckDB. These tables can be
   referenced in the spec using \`type = "duckdb"\` data nodes.
+
+- con:
+
+  Optional DuckDB connection to use for queries. If provided, this
+  connection will be used instead of creating a new one. This is useful
+  for GeoArrow workflows where you need spatial extension and geometry
+  tables already set up.
 
 - width:
 

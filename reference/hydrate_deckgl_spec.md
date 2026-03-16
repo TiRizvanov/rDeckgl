@@ -7,7 +7,7 @@ connection.
 ## Usage
 
 ``` r
-hydrate_deckgl_spec(spec, con)
+hydrate_deckgl_spec(spec, con, list_col_metadata = NULL)
 ```
 
 ## Arguments
@@ -19,6 +19,10 @@ hydrate_deckgl_spec(spec, con)
 - con:
 
   A live DBI connection to DuckDB.
+
+- list_col_metadata:
+
+  Environment containing metadata about JSON-encoded list columns.
 
 ## Value
 

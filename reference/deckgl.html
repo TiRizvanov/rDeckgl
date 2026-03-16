@@ -51,6 +51,7 @@ Supports server-side data hydration via DuckDB for efficient data handling.</p>
 <span>  <span class="va">spec</span>,</span>
 <span>  specType <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"auto"</span>, <span class="st">"json"</span>, <span class="st">"yaml"</span><span class="op">)</span>,</span>
 <span>  data <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  con <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  width <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  height <span class="op">=</span> <span class="cn">NULL</span></span>
 <span><span class="op">)</span></span></code></pre></div>
@@ -73,6 +74,13 @@ attempts to infer the format from the input.</p></dd>
 <dt id="arg-data">data<a class="anchor" aria-label="anchor" href="#arg-data"></a></dt>
 <dd><p>Named list of data.frames to register in DuckDB. These tables
 can be referenced in the spec using `type = "duckdb"` data nodes.</p></dd>
+
+
+<dt id="arg-con">con<a class="anchor" aria-label="anchor" href="#arg-con"></a></dt>
+<dd><p>Optional DuckDB connection to use for queries. If provided,
+this connection will be used instead of creating a new one.
+This is useful for GeoArrow workflows where you need spatial
+extension and geometry tables already set up.</p></dd>
 
 
 <dt id="arg-width">width<a class="anchor" aria-label="anchor" href="#arg-width"></a></dt>
