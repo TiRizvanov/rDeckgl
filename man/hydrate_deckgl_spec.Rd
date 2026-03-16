@@ -4,12 +4,14 @@
 \alias{hydrate_deckgl_spec}
 \title{Hydrate Deck.gl DuckDB data references}
 \usage{
-hydrate_deckgl_spec(spec, con)
+hydrate_deckgl_spec(spec, con, list_col_metadata = NULL)
 }
 \arguments{
 \item{spec}{Deck.gl specification as an R list.}
 
 \item{con}{A live DBI connection to DuckDB.}
+
+\item{list_col_metadata}{Environment containing metadata about JSON-encoded list columns.}
 }
 \value{
 A hydrated list that is safe to JSON-encode for Deck.gl.

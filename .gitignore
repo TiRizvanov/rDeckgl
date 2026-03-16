@@ -24,3 +24,6 @@ pkgdown/
 vignettes/*.html
 vignettes/*.pdf
 inst/doc/
+
+# Examples folder (local only)
+Examples/

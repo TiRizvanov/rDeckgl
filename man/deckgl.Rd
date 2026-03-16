@@ -8,6 +8,7 @@ deckgl(
   spec,
   specType = c("auto", "json", "yaml"),
   data = NULL,
+  con = NULL,
   width = NULL,
   height = NULL
 )
@@ -21,6 +22,11 @@ attempts to infer the format from the input.}
 
 \item{data}{Named list of data.frames to register in DuckDB. These tables
 can be referenced in the spec using `type = "duckdb"` data nodes.}
+
+\item{con}{Optional DuckDB connection to use for queries. If provided,
+this connection will be used instead of creating a new one.
+This is useful for GeoArrow workflows where you need spatial
+extension and geometry tables already set up.}
 
 \item{width}{CSS or pixel width (e.g. "100\%", "600px", or numeric).}
 
