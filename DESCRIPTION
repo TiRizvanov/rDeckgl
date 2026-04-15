@@ -30,6 +30,8 @@ Imports:
     base64enc (>= 0.1.3),
     stats
 Suggests:
+    adbcdrivermanager,
+    nanoarrow,
     knitr,
     rmarkdown
 VignetteBuilder: knitr

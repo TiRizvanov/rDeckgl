@@ -245,33 +245,37 @@ deckgl <- function(
 
         tryCatch(
           {
-            # Check if Arrow format is requested
             use_arrow <- identical(req$type, "arrow") || 
                          identical(req$type, "geoarrow")
+            is_geoarrow <- identical(req$type, "geoarrow")
             
-            if (use_arrow && requireNamespace("arrow", quietly = TRUE) && 
-                requireNamespace("base64enc", quietly = TRUE)) {
-              # Export as Arrow IPC stream
-              res <- DBI::dbSendQuery(con, req$sql)
+            if (use_arrow && requireNamespace("base64enc", quietly = TRUE)) {
+              raw_bytes <- NULL
               
-              # Use duckdb's arrow export
-              arrow_table <- duckdb::duckdb_fetch_arrow(res, stream = TRUE)
-              DBI::dbClearResult(res)
+              # For geoarrow, prefer ADBC to preserve extension metadata
+              if (is_geoarrow) {
+                raw_bytes <- .adbc_query_to_ipc_bytes(con, req$sql)
+              }
               
-              # Convert to raw IPC stream
-              raw_bytes <- arrow::write_to_raw(arrow_table, format = "stream")
+              # Fallback to duckdb arrow fetch
+              if (is.null(raw_bytes) && requireNamespace("arrow", quietly = TRUE)) {
+                res <- DBI::dbSendQuery(con, req$sql)
+                arrow_table <- duckdb::duckdb_fetch_arrow(res, stream = TRUE)
+                DBI::dbClearResult(res)
+                raw_bytes <- arrow::write_to_raw(arrow_table, format = "stream")
+              }
               
-              # Convert to base64 for JSON-safe transmission
-              base64_data <- base64enc::base64encode(raw_bytes)
-              
-              session$sendCustomMessage(
-                paste0(uid, "_deckgl_response"),
-                list(
-                  request = req$request,
-                  data = base64_data,
-                  dataFormat = "arrow"
+              if (!is.null(raw_bytes)) {
+                base64_data <- base64enc::base64encode(raw_bytes)
+                session$sendCustomMessage(
+                  paste0(uid, "_deckgl_response"),
+                  list(
+                    request = req$request,
+                    data = base64_data,
+                    dataFormat = if (is_geoarrow) "geoarrow" else "arrow"
+                  )
                 )
-              )
+              }
             } else {
               # Legacy JSON format
               dfres <- DBI::dbGetQuery(con, req$sql)
@@ -327,6 +331,68 @@ deckgl <- function(
 }
 
 
+#' Export a DuckDB query to Arrow IPC bytes via ADBC
+#'
+#' Uses the ADBC driver (adbcdrivermanager) to execute a query and capture
+#' the result as raw Arrow IPC stream bytes. This preserves GeoArrow extension
+#' metadata automatically in DuckDB >= 1.5.
+#'
+#' @param con A DBI connection to DuckDB (used to resolve the database path).
+#' @param query SQL query string.
+#' @return Raw vector of Arrow IPC stream bytes, or NULL on failure.
+#' @keywords internal
+.adbc_query_to_ipc_bytes <- function(con, query) {
+  if (!requireNamespace("adbcdrivermanager", quietly = TRUE) ||
+      !requireNamespace("nanoarrow", quietly = TRUE)) {
+    return(NULL)
+  }
+
+  db_path <- tryCatch({
+    info <- DBI::dbGetInfo(con)
+    dbname <- info$dbname
+    if (is.null(dbname)) dbname <- info$dbdir
+    if (is.null(dbname)) dbname <- ":memory:"
+    dbname
+  }, error = function(e) ":memory:")
+
+  tryCatch({
+    adbc_drv <- duckdb::duckdb_adbc()
+    adbc_db <- adbcdrivermanager::adbc_database_init(adbc_drv, path = db_path)
+    adbc_con <- adbcdrivermanager::adbc_connection_init(adbc_db)
+    on.exit({
+      try(adbcdrivermanager::adbc_connection_release(adbc_con), silent = TRUE)
+      try(adbcdrivermanager::adbc_database_release(adbc_db), silent = TRUE)
+    }, add = TRUE)
+
+    # Ensure spatial is loaded on the ADBC connection
+    load_stmt <- adbcdrivermanager::adbc_statement_init(adbc_con)
+    adbcdrivermanager::adbc_statement_set_sql_query(load_stmt, "INSTALL spatial")
+    tryCatch(
+      adbcdrivermanager::adbc_statement_execute_query(load_stmt),
+      error = function(e) invisible(NULL)
+    )
+    adbcdrivermanager::adbc_statement_release(load_stmt)
+    load_stmt2 <- adbcdrivermanager::adbc_statement_init(adbc_con)
+    adbcdrivermanager::adbc_statement_set_sql_query(load_stmt2, "LOAD spatial")
+    adbcdrivermanager::adbc_statement_execute_query(load_stmt2)
+    adbcdrivermanager::adbc_statement_release(load_stmt2)
+
+    stmt <- adbcdrivermanager::adbc_statement_init(adbc_con)
+    adbcdrivermanager::adbc_statement_set_sql_query(stmt, query)
+    stream <- nanoarrow::nanoarrow_allocate_array_stream()
+    adbcdrivermanager::adbc_statement_execute_query(stmt, stream)
+    tf <- tempfile(fileext = ".arrows")
+    nanoarrow::write_nanoarrow(stream, tf, format = "stream")
+    adbcdrivermanager::adbc_statement_release(stmt)
+    raw_bytes <- readBin(tf, "raw", file.info(tf)$size)
+    unlink(tf)
+    raw_bytes
+  }, error = function(e) {
+    NULL
+  })
+}
+
+
 #' Hydrate Deck.gl DuckDB data references
 #'
 #' Recursively walks a Deck.gl specification and replaces `type = "duckdb"`
@@ -356,36 +422,51 @@ hydrate_deckgl_spec <- function(spec, con, list_col_metadata = NULL) {
         fmt <- if (is.null(node$format)) "json" else tolower(node$format[[1]])
 
         if (fmt == "geoarrow") {
-          # For GeoArrow format, use DuckDB's native Arrow export to preserve
-          # GeoArrow extension metadata. This requires spatial extension and
-          # register_geoarrow_extensions() to be called.
-          # 
-          # IMPORTANT: We read the raw bytes directly from DuckDB's output
-          # instead of parsing through R's arrow package, which might strip
-          # extension metadata.
+          # Strategy priority:
+          # 1. COPY FORMAT ARROWS — uses the current DBI connection so it
+          #    sees temporary tables (e.g. color map joins from GiottoDB).
+          #    Requires the nanoarrow DuckDB extension.
+          # 2. ADBC — opens a separate connection; fastest binary export but
+          #    cannot see temporary tables from the DBI connection.
+          # 3. DBI fetch + R arrow — universal fallback, may lose GeoArrow
+          #    extension metadata.
+          
+          # Ensure GeoArrow-capable extensions are loaded on the DBI connection
+          try(DBI::dbExecute(con, "INSTALL nanoarrow FROM community"), silent = TRUE)
+          try(DBI::dbExecute(con, "LOAD nanoarrow"), silent = TRUE)
+          try(DBI::dbExecute(con, "CALL register_geoarrow_extensions()"), silent = TRUE)
+          
+          # 1) Try COPY FORMAT ARROWS (same connection, sees temp tables)
           temp_arrow <- tempfile(fileext = ".arrows")
           on.exit(unlink(temp_arrow), add = TRUE)
           
-          result <- tryCatch({
-            # Use COPY ... (FORMAT ARROWS) for proper GeoArrow metadata
+          copy_result <- tryCatch({
             DBI::dbExecute(con, sprintf(
               "COPY (%s) TO '%s' (FORMAT ARROWS)",
               query, temp_arrow
             ))
-            
-            # Read raw bytes directly - DO NOT parse through R arrow package
-            # as that can strip extension metadata
             raw_bytes <- readBin(temp_arrow, "raw", file.info(temp_arrow)$size)
-            base64_data <- base64enc::base64encode(raw_bytes)
-            
             list(
-              `__arrow` = base64_data,
+              `__arrow` = base64enc::base64encode(raw_bytes),
               `__arrow_format` = "stream",
               `__geoarrow` = TRUE
             )
-          }, error = function(e) {
-            # Fallback: regular Arrow export without GeoArrow metadata
-            warning("GeoArrow export failed, falling back to regular Arrow: ", e$message)
+          }, error = function(e) NULL)
+          
+          if (!is.null(copy_result)) return(copy_result)
+          
+          # 2) Try ADBC (separate connection — only works for persistent tables)
+          adbc_bytes <- .adbc_query_to_ipc_bytes(con, query)
+          if (!is.null(adbc_bytes) && length(adbc_bytes) > 0) {
+            return(list(
+              `__arrow` = base64enc::base64encode(adbc_bytes),
+              `__arrow_format` = "stream",
+              `__geoarrow` = TRUE
+            ))
+          }
+          
+          # 3) Fallback: DBI fetch + R arrow package
+          result <- tryCatch({
             df <- DBI::dbGetQuery(con, query)
             if (!is.data.frame(df) || nrow(df) == 0) {
               return(list(`__arrow` = "", `__arrow_format` = "stream"))
@@ -395,11 +476,13 @@ hydrate_deckgl_spec <- function(spec, con, list_col_metadata = NULL) {
             })
             arrow_table <- arrow::as_arrow_table(df)
             raw_bytes <- arrow::write_to_raw(arrow_table, format = "stream")
-            base64_data <- base64enc::base64encode(raw_bytes)
             list(
-              `__arrow` = base64_data,
+              `__arrow` = base64enc::base64encode(raw_bytes),
               `__arrow_format` = "stream"
             )
+          }, error = function(e) {
+            warning("All GeoArrow export methods failed: ", e$message)
+            list(`__arrow` = "", `__arrow_format` = "stream")
           })
           return(result)
         } else if (fmt %in% c("geoparquet", "parquet")) {
