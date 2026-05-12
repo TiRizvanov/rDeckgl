@@ -28,6 +28,7 @@ The package is not on CRAN yet. Install from source (e.g. using
 `devtools`):
 
 ``` r
+
 install.packages("devtools")      # if needed
 devtools::install()               # from a local checkout
 # or: devtools::install_github("TiRizvanov/rDeckgl")
@@ -40,6 +41,7 @@ required.
 ## Quick start
 
 ``` r
+
 library(rDeckgl)
 
 spec <- list(
@@ -81,6 +83,7 @@ Specs can also be authored in YAML and read from a file or string. The
 widget automatically converts YAML to JSON before hydration.
 
 ``` r
+
 spec_yaml <- "
 @@type: DeckGL
 initialViewState:
@@ -107,6 +110,7 @@ Drop the widget into a Shiny app using the provided UI and server
 helpers:
 
 ``` r
+
 library(shiny)
 library(rDeckgl)
 

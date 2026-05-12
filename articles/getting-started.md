@@ -9,6 +9,7 @@ demonstrates the basic usage of rDeckgl with working examples.
 ## Installation
 
 ``` r
+
 # Install from GitHub
 remotes::install_github("TiRizvanov/rDeckgl")
 ```
@@ -19,6 +20,7 @@ This example demonstrates deck.gl rendering performance with ~10,000
 points using a viridis color palette:
 
 ``` r
+
 library(rDeckgl)
 library(scales)
 
@@ -103,6 +105,7 @@ This example uses remote data from the deck.gl website to create a 3D
 hexagon heatmap:
 
 ``` r
+
 library(rDeckgl)
 
 hexagon_spec <- list(
@@ -157,6 +160,7 @@ This example demonstrates rendering polygons with centroids, useful for
 spatial data visualization like cell segmentation:
 
 ``` r
+
 library(rDeckgl)
 
 # Create synthetic cell polygon data
@@ -292,6 +296,7 @@ Use rDeckgl in Shiny applications with reactive bindings. Here’s a
 complete working example:
 
 ``` r
+
 library(shiny)
 library(rDeckgl)
 library(scales)
@@ -377,6 +382,7 @@ Copy them into your own session—no local `Examples/` folder required.
 ### GeoArrow scatterplot (points)
 
 ``` r
+
 library(rDeckgl)
 
 set.seed(42)
@@ -437,6 +443,7 @@ deckgl(
 ### Simple GeoArrow polygons
 
 ``` r
+
 library(rDeckgl)
 
 con <- DBI::dbConnect(duckdb::duckdb(), dbdir = ":memory:")
@@ -551,6 +558,7 @@ ogr2ogr \
 ```
 
 ``` r
+
 library(rDeckgl)
 library(arrow)
 
@@ -687,6 +695,7 @@ native `GeoArrowPolygonLayer`, which passes Arrow tables directly to the
 layer without converting to binary format:
 
 ``` r
+
 library(shiny)
 library(rDeckgl)
 library(arrow)
