@@ -2,5 +2,6 @@
 
 export(deckgl)
 export(deckglOutput)
+export(ggsql)
 export(renderDeckgl)
 importFrom(stats,setNames)
