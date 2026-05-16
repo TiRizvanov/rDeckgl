@@ -34,6 +34,11 @@ reference:
   - deckglOutput
   - renderDeckgl
 
+- title: SQL helpers
+  desc: ggplot2-style helper that compiles a deck.gl spec for SQL data
+  contents:
+  - ggsql
+
 - title: Internal Functions
   desc: Helper functions for internal use
   contents:
