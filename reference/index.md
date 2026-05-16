@@ -11,6 +11,13 @@ Main visualization functions
 - [`renderDeckgl()`](https://tirizvanov.github.io/rDeckgl/reference/renderDeckgl.md)
   : Shiny render function for Deck.gl
 
+## SQL helpers
+
+ggplot2-style helper that compiles a deck.gl spec for SQL data
+
+- [`ggsql()`](https://tirizvanov.github.io/rDeckgl/reference/ggsql.md) :
+  Render a ggsql query as a Deck.gl visualization
+
 ## Internal Functions
 
 Helper functions for internal use

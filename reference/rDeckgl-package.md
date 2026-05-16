@@ -1,6 +1,10 @@
 # rDeckgl: Deck.gl for R
 
-TODO
+Provides R bindings for deck.gl, a WebGL framework for rendering large
+interactive spatial and tabular visualizations. The package supplies
+htmlwidgets and Shiny bindings, supports DuckDB-backed data hydration,
+and bundles the JavaScript assets needed to render deck.gl
+specifications from R.
 
 ## See also
 
