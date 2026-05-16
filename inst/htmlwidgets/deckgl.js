@@ -999,12 +999,60 @@ async function renderDeckGlView(el, payload) {
                     return arrowTable.getChild(field.name);
                   });
 
+                  // Flatten any multi-chunk non-geometry vector into a single
+                  // contiguous Data, otherwise vectors.map(v => v.data[0])
+                  // would silently drop all rows past the first chunk while
+                  // the struct still claims arrowTable.numRows in length -
+                  // rows past the chunk boundary then read undefined values
+                  // and the layer falls back to its default opaque-black
+                  // fill (and disables picking) for those rows.
+                  function flattenVectorData(vec) {
+                    if (!vec || !vec.data) return null;
+                    if (vec.data.length <= 1) return vec.data[0];
+                    // Rebuild as a single contiguous chunk by iterating
+                    // every value and constructing a fresh single-chunk
+                    // Vector via vectorFromArray. Cross-type and reliable;
+                    // slower than zero-copy but only runs on the rare
+                    // multi-chunk export path.
+                    try {
+                      const arr = new Array(vec.length);
+                      for (let i = 0; i < vec.length; i++) arr[i] = vec.get(i);
+                      const rebuilt = arrow.vectorFromArray
+                        ? arrow.vectorFromArray(arr, vec.type)
+                        : null;
+                      if (rebuilt && rebuilt.data && rebuilt.data.length === 1) {
+                        return rebuilt.data[0];
+                      }
+                      console.warn(
+                        '[deckgl] flattenVectorData: vectorFromArray returned',
+                        rebuilt && rebuilt.data ? rebuilt.data.length : 'null',
+                        'chunks; falling back to chunk 0 (data past chunk 0 will be lost)'
+                      );
+                    } catch (e) {
+                      console.warn('[deckgl] flattenVectorData failed:', e);
+                    }
+                    return vec.data[0];
+                  }
+
+                  const multiChunkCols = vectors
+                    .map((v, i) => ({ name: newFields[i].name, n: v && v.data ? v.data.length : 0 }))
+                    .filter(x => x.n > 1);
+                  if (multiChunkCols.length > 0) {
+                    console.log(
+                      '[deckgl] Flattening multi-chunk columns before RecordBatch reconstruction:',
+                      multiChunkCols
+                    );
+                  }
+                  const flatChildren = vectors.map((v, i) =>
+                    newFields[i].name === geomColumnName ? v.data[0] : flattenVectorData(v)
+                  );
+
                   // Try to create RecordBatch with explicit schema
                   try {
                     // Get the data arrays from vectors
                     const structData = arrow.makeData({
                       type: new arrow.Struct(newFields),
-                      children: vectors.map(v => v.data[0]),
+                      children: flatChildren,
                       length: arrowTable.numRows
                     });
 
@@ -1030,9 +1078,78 @@ async function renderDeckGlView(el, payload) {
               }
             }
 
-            // For GeoArrowSolidPolygonLayer, render via binary SolidPolygonLayer to avoid earcut assertions
+            // Helper: parse "@@=[col_r, col_g, col_b(, col_a)]" expressions
+            // into the list of referenced column names. Returns null if the
+            // expression isn't a simple color array of Arrow column refs.
+            function parseColorAccessorColumns(expr) {
+              if (typeof expr !== 'string' || !expr.startsWith('@@=')) return null;
+              const body = expr.substring(3).trim();
+              if (!body.startsWith('[') || !body.endsWith(']')) return null;
+              const inner = body.substring(1, body.length - 1);
+              const parts = inner.split(',').map(s => s.trim()).filter(Boolean);
+              if (parts.length < 3 || parts.length > 4) return null;
+              // Each part must be a bare identifier (column name)
+              const idRe = /^[A-Za-z_][A-Za-z0-9_]*$/;
+              if (!parts.every(p => idRe.test(p))) return null;
+              return parts;
+            }
+
+            // Helper: build a packed per-feature RGBA Uint8Array from named
+            // Int32-like Arrow columns. Returns null on any missing column.
+            function buildColorBufferFromArrow(table, columnNames, numRows) {
+              const cols = columnNames.map(n => table.getChild(n));
+              if (cols.some(c => !c)) return null;
+              const buf = new Uint8Array(numRows * 4);
+              for (let i = 0; i < numRows; i++) {
+                buf[4 * i]     = cols[0].get(i) & 0xff;
+                buf[4 * i + 1] = cols[1].get(i) & 0xff;
+                buf[4 * i + 2] = cols[2].get(i) & 0xff;
+                buf[4 * i + 3] = cols.length >= 4 ? (cols[3].get(i) & 0xff) : 255;
+              }
+              return buf;
+            }
+
+            // SolidPolygonLayer in binary mode interprets attribute buffers
+            // as per-vertex, not per-feature. Expand a per-feature RGBA
+            // buffer to per-vertex using startIndices.
+            // startIndices has length numFeatures+1; positions has
+            // numVertices*2 entries (XY pairs).
+            function expandPerFeatureColorsToVertices(
+              perFeatureColors, startIndices, numVertices
+            ) {
+              const numFeatures = startIndices.length - 1;
+              const out = new Uint8Array(numVertices * 4);
+              for (let f = 0; f < numFeatures; f++) {
+                const vStart = startIndices[f];
+                const vEnd = startIndices[f + 1];
+                const r = perFeatureColors[4 * f];
+                const g = perFeatureColors[4 * f + 1];
+                const b = perFeatureColors[4 * f + 2];
+                const a = perFeatureColors[4 * f + 3];
+                for (let v = vStart; v < vEnd; v++) {
+                  out[4 * v]     = r;
+                  out[4 * v + 1] = g;
+                  out[4 * v + 2] = b;
+                  out[4 * v + 3] = a;
+                }
+              }
+              return out;
+            }
+
+            // Route WKB-converted GeoArrowPolygonLayer through the binary
+            // SolidPolygonLayer path too. The @geoarrow/deck.gl-layers
+            // function-accessor path resolves objectInfo.data.data.getChild
+            // unreliably for some rows (Table.data is an array of batches in
+            // modern Arrow JS), causing a subset of polygons to fall back to
+            // deck.gl's default opaque-black fill + picking off. Going
+            // through the binary path with a precomputed color buffer
+            // bypasses that lookup entirely.
             const geomCol = arrowTable.getChild(geomColumnName);
-            if (typeName === 'GeoArrowSolidPolygonLayer' && deck && deck.SolidPolygonLayer) {
+            const useBinarySolidPath =
+              (typeName === 'GeoArrowSolidPolygonLayer' ||
+               typeName === 'GeoArrowPolygonLayer') &&
+              deck && deck.SolidPolygonLayer;
+            if (useBinarySolidPath) {
               console.log('[deckgl] 🔧 Processing GeoArrowSolidPolygonLayer...');
               console.log('[deckgl] Converting Arrow table to binary format...');
               const binary = arrowPolygonToBinary(arrowTable, geomColumnName);
@@ -1067,19 +1184,51 @@ async function renderDeckGlView(el, payload) {
                   console.log('[deckgl] Sample properties:', properties[0]);
                 }
 
+                // Build attributes; add precomputed per-feature fill color
+                // buffer if the spec passes an @@= column-ref expression.
+                const polyAttributes = {
+                  getPolygon: { value: binary.positions, size: 2 }
+                };
+                let staticFillColor = null;
+                const fillCols = parseColorAccessorColumns(layerSpec.getFillColor);
+                if (fillCols) {
+                  const perFeatureColors = buildColorBufferFromArrow(
+                    arrowTable, fillCols, arrowTable.numRows
+                  );
+                  if (perFeatureColors) {
+                    const numVerts = binary.positions.length / 2;
+                    const perVertexColors = expandPerFeatureColorsToVertices(
+                      perFeatureColors, binary.startIndices, numVerts
+                    );
+                    polyAttributes.getFillColor = { value: perVertexColors, size: 4 };
+                    console.log(
+                      '[deckgl] Built per-vertex fill color buffer from columns:',
+                      fillCols,
+                      `(${arrowTable.numRows} features → ${numVerts} vertices)`
+                    );
+                  } else {
+                    console.warn(
+                      '[deckgl] Could not build color buffer from columns',
+                      fillCols, '- falling back to default fill'
+                    );
+                    staticFillColor = [24, 190, 140, 160];
+                  }
+                } else if (Array.isArray(layerSpec.getFillColor)) {
+                  staticFillColor = layerSpec.getFillColor;
+                } else {
+                  staticFillColor = [24, 190, 140, 160];
+                }
+
                 const polyLayerProps = {
                   id: (layerSpec.id || `geoarrow-${Date.now()}`) + '-binary',
                   data: {
                     length: binary.length,
                     startIndices: binary.startIndices,
-                    attributes: {
-                      getPolygon: { value: binary.positions, size: 2 }
-                    },
+                    attributes: polyAttributes,
                     properties: properties  // Store properties for tooltips
                   },
                   _normalize: false,
                   _windingOrder: 'CCW',
-                  getFillColor: layerSpec.getFillColor || [24, 190, 140, 160],
                   getElevation: layerSpec.getElevation || 0,
                   extruded: layerSpec.extruded || false,
                   pickable: layerSpec.pickable || false,
@@ -1088,6 +1237,9 @@ async function renderDeckGlView(el, payload) {
                   filled: layerSpec.filled !== false,
                   wireframe: layerSpec.wireframe || false
                 };
+                if (staticFillColor !== null) {
+                  polyLayerProps.getFillColor = staticFillColor;
+                }
 
                 console.log('[deckgl] 🎨 Creating SolidPolygonLayer with props:', {
                   id: polyLayerProps.id,
