@@ -292,13 +292,14 @@ deckgl <- function(
               }
               
               if (!is.null(raw_bytes)) {
-                base64_data <- base64enc::base64encode(raw_bytes)
                 session$sendCustomMessage(
                   paste0(uid, "_deckgl_response"),
-                  list(
+                  .deckgl_arrow_response_message(
+                    session = session,
+                    uid = uid,
                     request = req$request,
-                    data = base64_data,
-                    dataFormat = if (is_geoarrow) "geoarrow" else "arrow"
+                    raw_bytes = raw_bytes,
+                    data_format = if (is_geoarrow) "geoarrow" else "arrow"
                   )
                 )
               }
@@ -655,4 +656,26 @@ hydrate_deckgl_spec <- function(
   }
   if (geoarrow) out$`__geoarrow` <- TRUE
   out
+}
+.deckgl_arrow_response_message <- function(session, uid, request, raw_bytes, data_format) {
+  if (is.function(session$registerDataObj)) {
+    data_url <- session$registerDataObj(
+      paste0(uid, "_", request),
+      raw_bytes,
+      function(data, req) list(
+        status = 200L,
+        headers = list(
+          "Content-Type" = "application/vnd.apache.arrow.stream",
+          "Content-Length" = as.character(length(data))
+        ),
+        body = data
+      )
+    )
+    return(list(request = request, dataUrl = data_url, dataFormat = data_format))
+  }
+  list(
+    request = request,
+    data = base64enc::base64encode(raw_bytes),
+    dataFormat = data_format
+  )
 }
