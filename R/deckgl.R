@@ -18,6 +18,14 @@ NULL
 #'                  this connection will be used instead of creating a new one.
 #'                  This is useful for GeoArrow workflows where you need spatial
 #'                  extension and geometry tables already set up.
+#' @param data_transport How hydrated Arrow/Parquet query results are delivered
+#'                  to the browser. `"auto"` uses `"file"` when `data_dir` is
+#'                  supplied and otherwise falls back to `"inline"` for portable
+#'                  widgets; `"inline"` embeds base64 payloads in the widget;
+#'                  `"file"` writes binary files to `data_dir` and uses relative
+#'                  URLs.
+#' @param data_dir  Directory for `"file"` transport. Serve or save the widget
+#'                  from the same directory so relative URLs resolve.
 #' @param width     CSS or pixel width (e.g. "100\%", "600px", or numeric).
 #' @param height    CSS or pixel height (e.g. "100\%", "600px", or numeric).
 #'
@@ -67,9 +75,21 @@ deckgl <- function(
     specType = c("auto", "json", "yaml"),
     data = NULL,
     con = NULL,
+    data_transport = c("auto", "file", "inline"),
+    data_dir = NULL,
     width = NULL,
     height = NULL) {
   specType <- match.arg(specType)
+  data_transport <- match.arg(data_transport)
+  if (identical(data_transport, "auto")) {
+    data_transport <- if (!is.null(data_dir)) "file" else "inline"
+  }
+  if (identical(data_transport, "file")) {
+    if (!is.character(data_dir) || length(data_dir) != 1L || !nzchar(data_dir)) {
+      stop("'data_dir' is required when data_transport = 'file'.", call. = FALSE)
+    }
+    dir.create(data_dir, recursive = TRUE, showWarnings = FALSE)
+  }
 
   # 1) Determine format
   fmt <- specType
@@ -214,7 +234,13 @@ deckgl <- function(
 
   # 6) Hydrate spec with DuckDB data
   if (!is.null(spec_list)) {
-    spec_list <- hydrate_deckgl_spec(spec_list, con, list_col_metadata)
+    spec_list <- hydrate_deckgl_spec(
+      spec_list,
+      con,
+      list_col_metadata,
+      data_transport = data_transport,
+      data_dir = data_dir
+    )
   }
 
   # 7) Setup Shiny query handler if in Shiny context
@@ -401,9 +427,22 @@ deckgl <- function(
 #' @param spec Deck.gl specification as an R list.
 #' @param con  A live DBI connection to DuckDB.
 #' @param list_col_metadata Environment containing metadata about JSON-encoded list columns.
+#' @param data_transport `"auto"` to use `"file"` when `data_dir` is supplied
+#'   and `"inline"` otherwise, `"inline"` for base64 payloads, or `"file"` for
+#'   relative Arrow/Parquet URLs.
+#' @param data_dir Directory used by `"file"` transport.
 #' @return A hydrated list that is safe to JSON-encode for Deck.gl.
 #' @keywords internal
-hydrate_deckgl_spec <- function(spec, con, list_col_metadata = NULL) {
+hydrate_deckgl_spec <- function(
+    spec,
+    con,
+    list_col_metadata = NULL,
+    data_transport = c("auto", "file", "inline"),
+    data_dir = NULL) {
+  data_transport <- match.arg(data_transport)
+  if (identical(data_transport, "auto")) {
+    data_transport <- if (!is.null(data_dir)) "file" else "inline"
+  }
   transform_node <- function(node, inside_data = FALSE) {
     if (is.list(node)) {
       if (
@@ -446,11 +485,7 @@ hydrate_deckgl_spec <- function(spec, con, list_col_metadata = NULL) {
               query, temp_arrow
             ))
             raw_bytes <- readBin(temp_arrow, "raw", file.info(temp_arrow)$size)
-            list(
-              `__arrow` = base64enc::base64encode(raw_bytes),
-              `__arrow_format` = "stream",
-              `__geoarrow` = TRUE
-            )
+            .deckgl_arrow_data_node(raw_bytes, data_transport, data_dir, "geoarrow", TRUE)
           }, error = function(e) NULL)
           
           if (!is.null(copy_result)) return(copy_result)
@@ -458,11 +493,7 @@ hydrate_deckgl_spec <- function(spec, con, list_col_metadata = NULL) {
           # 2) Try ADBC (separate connection — only works for persistent tables)
           adbc_bytes <- .adbc_query_to_ipc_bytes(con, query)
           if (!is.null(adbc_bytes) && length(adbc_bytes) > 0) {
-            return(list(
-              `__arrow` = base64enc::base64encode(adbc_bytes),
-              `__arrow_format` = "stream",
-              `__geoarrow` = TRUE
-            ))
+            return(.deckgl_arrow_data_node(adbc_bytes, data_transport, data_dir, "geoarrow", TRUE))
           }
           
           # 3) Fallback: DBI fetch + R arrow package
@@ -476,10 +507,7 @@ hydrate_deckgl_spec <- function(spec, con, list_col_metadata = NULL) {
             })
             arrow_table <- arrow::as_arrow_table(df)
             raw_bytes <- arrow::write_to_raw(arrow_table, format = "stream")
-            list(
-              `__arrow` = base64enc::base64encode(raw_bytes),
-              `__arrow_format` = "stream"
-            )
+            .deckgl_arrow_data_node(raw_bytes, data_transport, data_dir, "geoarrow")
           }, error = function(e) {
             warning("All GeoArrow export methods failed: ", e$message)
             list(`__arrow` = "", `__arrow_format` = "stream")
@@ -496,17 +524,26 @@ hydrate_deckgl_spec <- function(spec, con, list_col_metadata = NULL) {
               "COPY (%s) TO '%s' (FORMAT PARQUET)",
               query, temp_parquet
             ))
+            if (identical(data_transport, "file")) {
+              target <- file.path(
+                data_dir,
+                sprintf("deckgl_parquet_%08x.parquet", sample.int(.Machine$integer.max, 1L))
+              )
+              dir.create(data_dir, recursive = TRUE, showWarnings = FALSE)
+              if (!file.copy(temp_parquet, target, overwrite = TRUE)) {
+                stop("Failed to write Parquet data file: ", target, call. = FALSE)
+              }
+              return(list(
+                `__parquet_url` = basename(target),
+                `__geoarrow` = TRUE
+              ))
+            }
             DBI::dbExecute(con, sprintf(
               "COPY (SELECT * FROM parquet_scan('%s')) TO '%s' (FORMAT ARROWS)",
               temp_parquet, temp_arrow
             ))
             raw_bytes <- readBin(temp_arrow, "raw", file.info(temp_arrow)$size)
-            base64_data <- base64enc::base64encode(raw_bytes)
-            list(
-              `__arrow` = base64_data,
-              `__arrow_format` = "stream",
-              `__geoarrow` = TRUE
-            )
+            .deckgl_arrow_data_node(raw_bytes, data_transport, data_dir, "geoarrow", TRUE)
           }, error = function(e) {
             warning("GeoParquet export failed: ", e$message)
             list(`__arrow` = "", `__arrow_format` = "stream")
@@ -526,11 +563,7 @@ hydrate_deckgl_spec <- function(spec, con, list_col_metadata = NULL) {
           })
           arrow_table <- arrow::as_arrow_table(df)
           raw_bytes <- arrow::write_to_raw(arrow_table, format = "stream")
-          base64_data <- base64enc::base64encode(raw_bytes)
-          return(list(
-            `__arrow` = base64_data,
-            `__arrow_format` = "stream"
-          ))
+          return(.deckgl_arrow_data_node(raw_bytes, data_transport, data_dir, "arrow"))
         } else {
           # Default JSON format
           df <- DBI::dbGetQuery(con, query)
@@ -599,4 +632,27 @@ hydrate_deckgl_spec <- function(spec, con, list_col_metadata = NULL) {
   }
 
   transform_node(spec, inside_data = FALSE)
+}
+
+.deckgl_write_data_file <- function(raw_bytes, data_dir, prefix, ext) {
+  if (!is.character(data_dir) || length(data_dir) != 1L || !nzchar(data_dir)) {
+    stop("'data_dir' is required for file transport.", call. = FALSE)
+  }
+  dir.create(data_dir, recursive = TRUE, showWarnings = FALSE)
+  path <- file.path(
+    data_dir,
+    sprintf("deckgl_%s_%08x%s", prefix, sample.int(.Machine$integer.max, 1L), ext)
+  )
+  writeBin(raw_bytes, path)
+  list(`__arrow_url` = basename(path))
+}
+
+.deckgl_arrow_data_node <- function(raw_bytes, data_transport, data_dir, prefix, geoarrow = FALSE) {
+  out <- if (identical(data_transport, "file")) {
+    c(.deckgl_write_data_file(raw_bytes, data_dir, prefix, ".arrows"), list(`__arrow_format` = "stream"))
+  } else {
+    list(`__arrow` = base64enc::base64encode(raw_bytes), `__arrow_format` = "stream")
+  }
+  if (geoarrow) out$`__geoarrow` <- TRUE
+  out
 }
