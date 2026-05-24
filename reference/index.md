@@ -17,10 +17,3 @@ ggplot2-style helper that compiles a deck.gl spec for SQL data
 
 - [`ggsql()`](https://tirizvanov.github.io/rDeckgl/reference/ggsql.md) :
   Render a ggsql query as a Deck.gl visualization
-
-## Internal Functions
-
-Helper functions for internal use
-
-- [`hydrate_deckgl_spec()`](https://tirizvanov.github.io/rDeckgl/reference/hydrate_deckgl_spec.md)
-  : Hydrate Deck.gl DuckDB data references

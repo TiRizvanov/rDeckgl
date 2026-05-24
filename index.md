@@ -29,9 +29,7 @@ The package is not on CRAN yet. Install from source (e.g. using
 
 ``` r
 
-install.packages("devtools")      # if needed
 devtools::install()               # from a local checkout
-# or: devtools::install_github("TiRizvanov/rDeckgl")
 ```
 
 The htmlwidgets assets (deck.gl 9.2.2 bundle, CSS, and widget glue) are
@@ -147,17 +145,17 @@ requested, so your widget remains responsive even with millions of rows.
 
 ## Examples
 
-The `examples/` directory contains scripts that mirror common deck.gl
+The `Examples/` directory contains scripts that mirror common deck.gl
 use cases:
 
-- `examples/basic_scatterplot.R`
-- `examples/hexagon_heatmap.R`
-- `examples/polygon_layer.R`
-- `examples/giotto_geometries.R`
-- `examples/giotto_wkb_polygons.R`
+- `Examples/00_quick_test.R`
+- `Examples/01_basic_geoarrow_polygon.R`
+- `Examples/02_hexagon_cells.R`
+- `Examples/03_solid_polygon_3d.R`
+- `Examples/05_geoarrow_scatterplot.R`
 
-Run them with `source("examples/basic_scatterplot.R")` (after installing
-the package with `devtools::load_all()` if working from source).
+Run them with `source("Examples/00_quick_test.R")` after loading or
+installing the package from a local checkout.
 
 ## Development
 
@@ -170,5 +168,5 @@ the package with `devtools::load_all()` if working from source).
 - Use `devtools::load_all()` to iterate locally, then
   `devtools::install()` to produce a build.
 
-Contributions and bug reports are welcome—open an issue or submit a pull
-request with reproducible steps.
+Contributions and bug reports are welcome. Please report issues to the
+package maintainer listed in `DESCRIPTION`.
