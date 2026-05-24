@@ -9,6 +9,7 @@
 ^\.Rhistory$
 ^\.Ruserdata$
 ^\.DS_Store$
+(^|/)\.DS_Store$
 ^\.dropbox$
 ^_pkgdown\.yml$
 ^docs$
@@ -19,6 +20,9 @@
 ^examples$
 ^.*\.duckdb$
 ^.*\.db$
+^.*\.tar\.gz$
+^.*\.Rcheck$
 ^giottodb-visium\.db$
 ^cran-comments\.md$
+^CRAN-SUBMISSION$
 ^revdep$

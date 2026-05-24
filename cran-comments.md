@@ -2,19 +2,24 @@
 
 ## Test environments
 
-* local macOS 15 (aarch64-apple-darwin20), R 4.5.1 — 0 errors, 0 warnings, 1 NOTE
+* local macOS 15.7.3 (aarch64-apple-darwin20), R 4.5.1 — 0 errors, 0 warnings, 0 notes (`--as-cran --no-manual`, incoming remote checks disabled by `devtools::check()`)
 * (please re-run on win-builder + R-hub before submission)
 
 ## R CMD check results
 
-0 errors | 0 warnings | 1 NOTE (new submission)
+0 errors | 0 warnings | 0 notes in the local check.
+
+Expected CRAN incoming NOTE:
 
   > New submission
-  > installed size is 8.5Mb
-  >   sub-directories of 1Mb or more:
-  >     htmlwidgets   8.2Mb
 
-This is the first CRAN submission of rDeckgl. The size NOTE is expected — the
+Installed size INFO:
+
+  > installed size is 8.5Mb
+  > sub-directories of 1Mb or more:
+  >   htmlwidgets   8.2Mb
+
+This is the first CRAN submission of rDeckgl. The size INFO is expected — the
 package bundles the pre-built JavaScript that renders deck.gl visualisations
 inside an htmlwidget (see below).
 
@@ -40,6 +45,6 @@ exclusively from a CDN at runtime. Please advise.
 
 ## URLs
 
-`URL` and `BugReports` in DESCRIPTION reference
-`https://github.com/TiRizvanov/rDeckgl`. The repository will be public before
-this submission is sent.
+The package does not currently declare `URL` or `BugReports` fields because the
+public repository and pkgdown site are not yet available. Add them back before
+submission only after `tools::check_package_urls(".")` reports no broken URLs.

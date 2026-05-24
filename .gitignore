@@ -9,6 +9,7 @@
 *.tgz
 .Rcheck/
 rDeckgl.Rcheck/
+CRAN-SUBMISSION
 
 # pkgdown
 docs/

@@ -6,10 +6,11 @@ template:
 navbar:
   structure:
     left: [home, reference, articles, news]
-    right: [search, github]
+    right: [search]
   components:
     home:
       icon: fas fa-home fa-lg
+      aria-label: Home
       href: index.html
     reference:
       text: Reference
@@ -22,10 +23,6 @@ navbar:
     news:
       text: News
       href: news/index.html
-    github:
-      icon: fab fa-github fa-lg
-      href: https://github.com/TiRizvanov/rDeckgl
-
 reference:
 - title: Core Functions
   desc: Main visualization functions
@@ -38,11 +35,6 @@ reference:
   desc: ggplot2-style helper that compiles a deck.gl spec for SQL data
   contents:
   - ggsql
-
-- title: Internal Functions
-  desc: Helper functions for internal use
-  contents:
-  - hydrate_deckgl_spec
 
 articles:
 - title: Get Started
