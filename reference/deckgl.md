@@ -12,6 +12,8 @@ deckgl(
   specType = c("auto", "json", "yaml"),
   data = NULL,
   con = NULL,
+  data_transport = c("auto", "file", "inline"),
+  data_dir = NULL,
   width = NULL,
   height = NULL
 )
@@ -40,6 +42,19 @@ deckgl(
   connection will be used instead of creating a new one. This is useful
   for GeoArrow workflows where you need spatial extension and geometry
   tables already set up.
+
+- data_transport:
+
+  How hydrated Arrow/Parquet query results are delivered to the browser.
+  \`"auto"\` uses \`"file"\` when \`data_dir\` is supplied and otherwise
+  falls back to \`"inline"\` for portable widgets; \`"inline"\` embeds
+  base64 payloads in the widget; \`"file"\` writes binary files to
+  \`data_dir\` and uses relative URLs.
+
+- data_dir:
+
+  Directory for \`"file"\` transport. Serve or save the widget from the
+  same directory so relative URLs resolve.
 
 - width:
 

@@ -12,6 +12,8 @@ Useful links:
 
 - <https://github.com/TiRizvanov/rDeckgl>
 
+- <https://tirizvanov.github.io/rDeckgl/>
+
 - Report bugs at <https://github.com/TiRizvanov/rDeckgl/issues>
 
 ## Author
