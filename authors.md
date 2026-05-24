@@ -8,6 +8,12 @@
 
 - **Ruben Dries**. Author, reviewer.
 
+- **Dries Lab**. Funder.  
+  Host laboratory and funding source
+
+- **Boston University**. Funder.  
+  Undergraduate Research Opportunities Program (UROP)
+
 ## Citation
 
 Rizvanov T, Ruiz E, Dries R (2026). *rDeckgl: Deck.gl for R*. R package

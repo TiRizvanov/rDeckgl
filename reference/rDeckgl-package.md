@@ -6,15 +6,11 @@ htmlwidgets and Shiny bindings, supports DuckDB-backed data hydration,
 and bundles the JavaScript assets needed to render deck.gl
 specifications from R.
 
-## See also
+## Acknowledgements
 
-Useful links:
-
-- <https://github.com/TiRizvanov/rDeckgl>
-
-- <https://tirizvanov.github.io/rDeckgl/>
-
-- Report bugs at <https://github.com/TiRizvanov/rDeckgl/issues>
+Developed in the Dries Lab at Boston University. This work was supported
+by the Dries Lab and the Boston University Undergraduate Research
+Opportunities Program (UROP).
 
 ## Author
 
@@ -25,3 +21,10 @@ Authors:
 - Edward C. Ruiz <ecr7407@gmail.com>
 
 - Ruben Dries <rubendries@gmail.com> \[reviewer\]
+
+Other contributors:
+
+- Dries Lab (Host laboratory and funding source) \[funder\]
+
+- Boston University (Undergraduate Research Opportunities Program
+  (UROP)) \[funder\]
