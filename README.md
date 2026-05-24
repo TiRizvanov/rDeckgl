@@ -136,3 +136,7 @@ Run them with `source("Examples/00_quick_test.R")` after loading or installing t
 - Use `devtools::load_all()` to iterate locally, then `devtools::install()` to produce a build.
 
 Contributions and bug reports are welcome. Please report issues to the package maintainer listed in `DESCRIPTION`.
+
+## Acknowledgements
+
+This package was developed in the [Dries Lab](https://www.drieslab.com/) at Boston University. Funding support was provided by the Dries Lab and the Boston University Undergraduate Research Opportunities Program (UROP).

@@ -8,7 +8,11 @@ Authors@R: c(
     person("Edward C.", "Ruiz", email = "ecr7407@gmail.com",
            role = c("aut")),
     person("Ruben", "Dries", email = "rubendries@gmail.com",
-           role = c("aut", "rev"))
+           role = c("aut", "rev")),
+    person(given = "Dries Lab", role = "fnd",
+           comment = "Host laboratory and funding source"),
+    person(given = "Boston University", role = "fnd",
+           comment = "Undergraduate Research Opportunities Program (UROP)")
   )
 Description: Provides R bindings for deck.gl, a WebGL framework for rendering
     large interactive spatial and tabular visualizations. The package supplies

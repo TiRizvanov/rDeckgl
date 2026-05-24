@@ -8,15 +8,13 @@
 \description{
 Provides R bindings for deck.gl, a WebGL framework for rendering large interactive spatial and tabular visualizations. The package supplies htmlwidgets and Shiny bindings, supports DuckDB-backed data hydration, and bundles the JavaScript assets needed to render deck.gl specifications from R.
 }
-\seealso{
-Useful links:
-\itemize{
-  \item \url{https://github.com/TiRizvanov/rDeckgl}
-  \item \url{https://tirizvanov.github.io/rDeckgl/}
-  \item Report bugs at \url{https://github.com/TiRizvanov/rDeckgl/issues}
+\section{Acknowledgements}{
+
+Developed in the Dries Lab at Boston University. This work was supported by
+the Dries Lab and the Boston University Undergraduate Research Opportunities
+Program (UROP).
 }
 
-}
 \author{
 \strong{Maintainer}: Timur Rizvanov \email{timurr@bu.edu}
 
@@ -24,6 +22,12 @@ Authors:
 \itemize{
   \item Edward C. Ruiz \email{ecr7407@gmail.com}
   \item Ruben Dries \email{rubendries@gmail.com} [reviewer]
+}
+
+Other contributors:
+\itemize{
+  \item Dries Lab (Host laboratory and funding source) [funder]
+  \item Boston University (Undergraduate Research Opportunities Program (UROP)) [funder]
 }
 
 }
