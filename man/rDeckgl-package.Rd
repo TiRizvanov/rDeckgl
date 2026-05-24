@@ -12,6 +12,7 @@ Provides R bindings for deck.gl, a WebGL framework for rendering large interacti
 Useful links:
 \itemize{
   \item \url{https://github.com/TiRizvanov/rDeckgl}
+  \item \url{https://tirizvanov.github.io/rDeckgl/}
   \item Report bugs at \url{https://github.com/TiRizvanov/rDeckgl/issues}
 }
 

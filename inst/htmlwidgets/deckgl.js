@@ -1955,17 +1955,27 @@ HTMLWidgets.widget({
           cbEntry.reject(new Error(message.error));
         } else {
           // Check if data is Arrow format
-          if (message.dataFormat === 'arrow' && typeof message.data === 'string') {
+          if ((message.dataFormat === 'arrow' || message.dataFormat === 'geoarrow') &&
+              (typeof message.data === 'string' || typeof message.dataUrl === 'string')) {
             try {
               const { ArrowLoader } = await ensureDeckGlModules();
               if (!ArrowLoader) {
                 throw new Error('ArrowLoader not available');
               }
-              // Decode base64 to Uint8Array
-              const binaryString = atob(message.data);
-              const bytes = new Uint8Array(binaryString.length);
-              for (let i = 0; i < binaryString.length; i++) {
-                bytes[i] = binaryString.charCodeAt(i);
+              let bytes;
+              if (typeof message.dataUrl === 'string') {
+                const response = await fetch(message.dataUrl);
+                if (!response.ok) {
+                  throw new Error(`Failed to fetch Arrow data: ${response.status} ${response.statusText}`);
+                }
+                bytes = new Uint8Array(await response.arrayBuffer());
+              } else {
+                // Decode base64 to Uint8Array
+                const binaryString = atob(message.data);
+                bytes = new Uint8Array(binaryString.length);
+                for (let i = 0; i < binaryString.length; i++) {
+                  bytes[i] = binaryString.charCodeAt(i);
+                }
               }
               // Parse Arrow IPC stream
               const arrowTable = await ArrowLoader.parse(bytes);
