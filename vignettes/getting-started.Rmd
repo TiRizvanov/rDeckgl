@@ -456,101 +456,6 @@ deckgl(
 )
 ```
 
-### Simple GeoArrow polygons
-
-```{r geoarrow-polygons, eval=FALSE}
-library(rDeckgl)
-
-con <- DBI::dbConnect(duckdb::duckdb(), dbdir = ":memory:")
-
-for (sql in c("INSTALL spatial", "LOAD spatial",
-              "INSTALL nanoarrow FROM community", "LOAD nanoarrow",
-              "CALL register_geoarrow_extensions()")) {
-  try(DBI::dbExecute(con, sql), silent = TRUE)
-}
-
-set.seed(42)
-n_polygons <- 50
-
-polygons_data <- data.frame(
-  id = 1:n_polygons,
-  center_x = runif(n_polygons, -122.5, -122.3),
-  center_y = runif(n_polygons, 37.7, 37.85),
-  size = runif(n_polygons, 0.005, 0.015),
-  value = runif(n_polygons, 0, 1)
-)
-
-polygons_data$wkt <- apply(polygons_data, 1, function(row) {
-  cx <- as.numeric(row["center_x"])
-  cy <- as.numeric(row["center_y"])
-  s <- as.numeric(row["size"])
-  sprintf(
-    "POLYGON((%f %f, %f %f, %f %f, %f %f, %f %f))",
-    cx - s, cy - s,
-    cx + s, cy - s,
-    cx + s, cy + s,
-    cx - s, cy + s,
-    cx - s, cy - s
-  )
-})
-
-DBI::dbWriteTable(con, "polygon_data", polygons_data, overwrite = TRUE)
-
-DBI::dbExecute(con, "
-  CREATE TABLE polygons_geoarrow AS
-  SELECT
-    id,
-    'Polygon ' || id AS name,
-    value,
-    ST_GeomFromText(wkt) AS geometry
-  FROM polygon_data
-")
-
-spec <- list(
-  `@@type` = "DeckGL",
-  initialViewState = list(
-    longitude = -122.4,
-    latitude = 37.78,
-    zoom = 11,
-    pitch = 45,
-    bearing = 0
-  ),
-  views = list(
-    list(
-      `@@type` = "MapView",
-      controller = TRUE,
-      mapStyle = "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json"
-    )
-  ),
-  layers = list(
-    list(
-      `@@type` = "GeoArrowSolidPolygonLayer",
-      id = "geoarrow-polygons",
-      data = list(
-        type = "duckdb",
-        query = "SELECT id, name, value, geometry FROM polygons_geoarrow",
-        format = "geoarrow"
-      ),
-      getFillColor = "@@=[value * 255, (1 - value) * 200, 100, 180]",
-      getElevation = "@@=value * 1000",
-      extruded = TRUE,
-      pickable = TRUE
-    )
-  )
-)
-
-widget <- deckgl(
-  spec = spec,
-  con = con,
-  width = "100%",
-  height = "600px"
-)
-
-DBI::dbDisconnect(con)
-
-widget
-```
-
 ### Utah building footprints (GeoArrow)
 
 This script renders the Utah portion of the [Microsoft USBuildingFootprints](https://github.com/microsoft/USBuildingFootprints) dataset as GeoArrow polygons. Create a GeoParquet with GeoArrow-encoded geometries from the upstream ZIP:
@@ -571,80 +476,49 @@ ogr2ogr \
 library(rDeckgl)
 library(arrow)
 
-cat("╔═══════════════════════════════════════════════════════════════╗\n")
-cat("║  Working GeoArrow Example (up to 50k buildings)              ║\n")
-cat("╚═══════════════════════════════════════════════════════════════╝\n\n")
-
 parquet_path <- "Utah.parquet"
 
 if (!file.exists(parquet_path)) {
-  stop("❌ Parquet file not found: ", parquet_path)
+  stop("Parquet file not found: ", parquet_path)
 }
-
-cat("📦 Reading Parquet file...\n")
 
 parquet_data <- arrow::read_parquet(parquet_path)
-cat("   Total rows in file:", nrow(parquet_data), "\n")
 
 max_rows <- 1000000
-if (nrow(parquet_data) > max_rows) {
-  cat("   Sampling", max_rows, "rows (use URL-loading for full dataset)\n")
-  sample_data <- head(parquet_data, max_rows)
+sample_data <- if (nrow(parquet_data) > max_rows) {
+  head(parquet_data, max_rows)
 } else {
-  sample_data <- parquet_data
+  parquet_data
 }
 
-cat("✅ Using", nrow(sample_data), "buildings\n\n")
-
-cat("📍 Computing density center...\n")
+# Locate the densest cluster of buildings to centre the initial view
 bbox_data <- sample_data$GEOMETRY_bbox
 if (!is.null(bbox_data)) {
-  xmin <- as.numeric(bbox_data$xmin)
-  xmax <- as.numeric(bbox_data$xmax)
-  ymin <- as.numeric(bbox_data$ymin)
-  ymax <- as.numeric(bbox_data$ymax)
+  cx <- (as.numeric(bbox_data$xmin) + as.numeric(bbox_data$xmax)) / 2
+  cy <- (as.numeric(bbox_data$ymin) + as.numeric(bbox_data$ymax)) / 2
 
-  cx <- (xmin + xmax) / 2
-  cy <- (ymin + ymax) / 2
+  grid_key     <- paste(floor(cx / 0.1), floor(cy / 0.1), sep = ",")
+  densest_cell <- names(which.max(table(grid_key)))
+  idx          <- which(grid_key == densest_cell)
 
-  grid_size <- 0.1
-  grid_x <- floor(cx / grid_size)
-  grid_y <- floor(cy / grid_size)
-  grid_key <- paste(grid_x, grid_y, sep = ",")
-
-  grid_counts <- table(grid_key)
-  densest_cell <- names(which.max(grid_counts))
-  densest_count <- max(grid_counts)
-  densest_indices <- which(grid_key == densest_cell)
-
-  center_lon <- mean(cx[densest_indices], na.rm = TRUE)
-  center_lat <- mean(cy[densest_indices], na.rm = TRUE)
-
-  cat("   Found densest area with", densest_count, "buildings\n")
-  cat("   Center: [", round(center_lon, 4), ", ", round(center_lat, 4), "]\n\n", sep = "")
+  center_lon <- mean(cx[idx], na.rm = TRUE)
+  center_lat <- mean(cy[idx], na.rm = TRUE)
 } else {
   center_lon <- -110.4144
-  center_lat <- 39.4991
-  cat("   Using default center (no bbox data)\n\n")
+  center_lat <-   39.4991
 }
 
-cat("🔧 Converting to Arrow IPC...\n")
-
+# Encode the Arrow table as base64 IPC for inline delivery
 arrow_table <- arrow::arrow_table(sample_data)
-temp_file <- tempfile(fileext = ".arrows")
+temp_file   <- tempfile(fileext = ".arrows")
 arrow::write_ipc_stream(arrow_table, temp_file)
 arrow_bytes <- readBin(temp_file, "raw", n = file.info(temp_file)$size)
 unlink(temp_file)
 arrow_b64 <- base64enc::base64encode(arrow_bytes)
 
-size_mb <- length(arrow_bytes) / 1024 / 1024
-cat("✅ Encoded", round(size_mb, 1), "MB\n")
-if (size_mb > 50) {
-  warning("⚠️  Data > 50MB may cause browser issues!")
+if (length(arrow_bytes) / 1024 / 1024 > 50) {
+  warning("Encoded payload exceeds 50 MB and may cause browser issues.")
 }
-cat("\n")
-
-cat("🎨 Creating deck.gl spec centered at [", round(center_lon, 4), ", ", round(center_lat, 4), "]...\n", sep = "")
 
 spec <- list(
   `@@type` = "DeckGL",
@@ -652,49 +526,28 @@ spec <- list(
   height = 768,
   initialViewState = list(
     longitude = center_lon,
-    latitude = center_lat,
-    zoom = 12,
-    pitch = 0,
-    bearing = 0
+    latitude  = center_lat,
+    zoom      = 12,
+    pitch     = 0,
+    bearing   = 0
   ),
   controller = TRUE,
   layers = list(
     list(
-      `@@type` = "GeoArrowSolidPolygonLayer",
-      id = "utah-buildings",
-      data = list(`__arrow` = arrow_b64),
+      `@@type`       = "GeoArrowSolidPolygonLayer",
+      id             = "utah-buildings",
+      data           = list(`__arrow` = arrow_b64),
       geometryColumn = "GEOMETRY",
-      getFillColor = c(255, 100, 0, 200),
-      extruded = FALSE,
-      pickable = TRUE,
-      `_normalize` = FALSE,
+      getFillColor   = c(255, 100, 0, 200),
+      extruded       = FALSE,
+      pickable       = TRUE,
+      `_normalize`   = FALSE,
       `_windingOrder` = "CCW"
     )
   )
 )
 
-cat("✅ Spec created\n\n")
-
-cat("🚀 Creating widget...\n")
-
-widget <- deckgl(
-  spec = spec,
-  width = 1024,
-  height = 768
-)
-
-cat("✅ Widget created!\n\n")
-cat("📋 Expected:\n")
-cat("   • Orange building footprints (up to 500k)\n")
-cat("   • View centered on densest building cluster\n")
-cat("   • Gray/black background (no basemap)\n\n")
-
-cat("💡 Controls:\n")
-cat("   • Scroll wheel: zoom in/out\n")
-cat("   • Drag: pan around\n")
-cat("   • Zoom in (14+) to see building shapes\n\n")
-
-widget
+deckgl(spec = spec, width = 1024, height = 768)
 ```
 
 ### Native GeoArrow in Shiny (no binary conversion)
@@ -710,7 +563,7 @@ library(arrow)
 parquet_path <- "Utah.parquet"
 
 if (!file.exists(parquet_path)) {
-  stop("❌ Parquet file not found: ", parquet_path)
+  stop("Parquet file not found: ", parquet_path)
 }
 
 # Read Parquet and create Arrow IPC file
