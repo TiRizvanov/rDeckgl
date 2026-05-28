@@ -55,47 +55,33 @@
   <main id="main" class="col-md-9"><div class="section level1">
 <div class="page-header"><h1 id="rdeckgl">rDeckgl<a class="anchor" aria-label="anchor" href="#rdeckgl"></a>
 </h1></div>
-<p>R bindings for <a href="https://deck.gl" class="external-link">deck.gl</a> 9.2.2 that let you render large, interactive geospatial visualizations directly from R. The package wraps the deck.gl JSON interface inside an <code>htmlwidget</code>, adds convenient DuckDB-backed data hydration, and provides Shiny bindings so you can drop the widget into dashboards with minimal boilerplate.</p>
-<div class="section level2">
-<h2 id="key-features">Key features<a class="anchor" aria-label="anchor" href="#key-features"></a>
-</h2>
-<ul>
-<li>Works with deck.gl JSON or YAML specifications, including auto-detection of the format.</li>
-<li>Registers in-memory data frames as DuckDB tables so specs can reference server-side SQL queries.</li>
-<li>Bundles deck.gl 9.2.2 along with the deck.gl JSON converter and default loaders.</li>
-<li>Ships with <code><a href="reference/deckglOutput.html">deckglOutput()</a></code> / <code><a href="reference/renderDeckgl.html">renderDeckgl()</a></code> helpers for seamless Shiny integration.</li>
-<li>Includes runnable examples that illustrate common layers such as scatterplot, polygon, hexagon heatmap, and Giotto geometries.</li>
-</ul>
-</div>
+<p>R bindings for <a href="https://deck.gl" class="external-link">deck.gl</a> 9.2.2. The package wraps the deck.gl JSON interface inside an <a href="https://www.htmlwidgets.org/" class="external-link">htmlwidget</a>, hydrates data through DuckDB, and ships Shiny bindings so you can drop interactive WebGL maps and large-data visualizations into any R workflow.</p>
 <div class="section level2">
 <h2 id="installation">Installation<a class="anchor" aria-label="anchor" href="#installation"></a>
 </h2>
-<p>The package is not on CRAN yet. Install from source (e.g. using <code>devtools</code>):</p>
+<p>Once on CRAN:</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu">devtools</span><span class="fu">::</span><span class="fu">install</span><span class="op">(</span><span class="op">)</span>               <span class="co"># from a local checkout</span></span></code></pre></div>
-<p>The htmlwidgets assets (deck.gl 9.2.2 bundle, CSS, and widget glue) are bundled under <code>inst/htmlwidgets</code>, so no extra JavaScript setup is required.</p>
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/install.packages.html" class="external-link">install.packages</a></span><span class="op">(</span><span class="st">"rDeckgl"</span><span class="op">)</span></span></code></pre></div>
+<p>Development version from GitHub:</p>
+<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># install.packages("remotes")</span></span>
+<span><span class="fu">remotes</span><span class="fu">::</span><span class="fu">install_github</span><span class="op">(</span><span class="st">"TiRizvanov/rDeckgl"</span><span class="op">)</span></span></code></pre></div>
+<p>The deck.gl 9.2.2 JavaScript bundle, JSON converter, default loaders, CSS, and widget glue are pre-built and shipped under <code>inst/htmlwidgets/</code>, so no Node or JavaScript tooling is required at runtime.</p>
 </div>
 <div class="section level2">
 <h2 id="quick-start">Quick start<a class="anchor" aria-label="anchor" href="#quick-start"></a>
 </h2>
-<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va">rDeckgl</span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">spec</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
 <span>  `@@type` <span class="op">=</span> <span class="st">"DeckGL"</span>,</span>
-<span>  initialViewState <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
-<span>    longitude <span class="op">=</span> <span class="op">-</span><span class="fl">122.4</span>,</span>
-<span>    latitude  <span class="op">=</span> <span class="fl">37.76</span>,</span>
-<span>    zoom      <span class="op">=</span> <span class="fl">12</span></span>
-<span>  <span class="op">)</span>,</span>
+<span>  initialViewState <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>longitude <span class="op">=</span> <span class="op">-</span><span class="fl">122.4</span>, latitude <span class="op">=</span> <span class="fl">37.76</span>, zoom <span class="op">=</span> <span class="fl">12</span><span class="op">)</span>,</span>
 <span>  layers <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
 <span>    <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
 <span>      `@@type` <span class="op">=</span> <span class="st">"ScatterplotLayer"</span>,</span>
-<span>      id   <span class="op">=</span> <span class="st">"scatterplot"</span>,</span>
-<span>      data <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
-<span>        type  <span class="op">=</span> <span class="st">"duckdb"</span>,</span>
-<span>        query <span class="op">=</span> <span class="st">"SELECT lon, lat, radius FROM points"</span></span>
-<span>      <span class="op">)</span>,</span>
+<span>      id   <span class="op">=</span> <span class="st">"points"</span>,</span>
+<span>      data <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>type <span class="op">=</span> <span class="st">"duckdb"</span>, query <span class="op">=</span> <span class="st">"SELECT lon, lat, radius FROM points"</span><span class="op">)</span>,</span>
 <span>      getPosition  <span class="op">=</span> <span class="st">"@@=[lon, lat]"</span>,</span>
 <span>      getRadius    <span class="op">=</span> <span class="st">"@@=radius"</span>,</span>
 <span>      getFillColor <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">255</span>, <span class="fl">0</span>, <span class="fl">0</span><span class="op">)</span></span>
@@ -105,99 +91,63 @@
 <span></span>
 <span><span class="va">data</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
 <span>  points <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
-<span>    lon    <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="op">-</span><span class="fl">122.4</span>, <span class="op">-</span><span class="fl">122.45</span>, <span class="op">-</span><span class="fl">122.35</span><span class="op">)</span>,</span>
-<span>    lat    <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">37.76</span>, <span class="fl">37.78</span>, <span class="fl">37.74</span><span class="op">)</span>,</span>
-<span>    radius <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">100</span>, <span class="fl">150</span>, <span class="fl">200</span><span class="op">)</span></span>
+<span>    lon    <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="op">-</span><span class="fl">122.40</span>, <span class="op">-</span><span class="fl">122.45</span>, <span class="op">-</span><span class="fl">122.35</span><span class="op">)</span>,</span>
+<span>    lat    <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span> <span class="fl">37.76</span>,   <span class="fl">37.78</span>,   <span class="fl">37.74</span><span class="op">)</span>,</span>
+<span>    radius <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">100</span>,      <span class="fl">150</span>,     <span class="fl">200</span><span class="op">)</span></span>
 <span>  <span class="op">)</span></span>
 <span><span class="op">)</span></span>
 <span></span>
-<span><span class="fu"><a href="reference/deckgl.html">deckgl</a></span><span class="op">(</span>spec <span class="op">=</span> <span class="va">spec</span>, data <span class="op">=</span> <span class="va">data</span>, width <span class="op">=</span> <span class="st">"100%"</span>, height <span class="op">=</span> <span class="st">"500px"</span><span class="op">)</span></span></code></pre></div>
-<div class="section level3">
-<h3 id="yaml-specs">YAML specs<a class="anchor" aria-label="anchor" href="#yaml-specs"></a>
-</h3>
-<p>Specs can also be authored in YAML and read from a file or string. The widget automatically converts YAML to JSON before hydration.</p>
-<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">spec_yaml</span> <span class="op">&lt;-</span> <span class="st">"</span></span>
-<span><span class="st">@@type: DeckGL</span></span>
-<span><span class="st">initialViewState:</span></span>
-<span><span class="st">  longitude: -122.4</span></span>
-<span><span class="st">  latitude: 37.76</span></span>
-<span><span class="st">  zoom: 11</span></span>
-<span><span class="st">layers:</span></span>
-<span><span class="st">  - @@type: HexagonLayer</span></span>
-<span><span class="st">    id: hex-layer</span></span>
-<span><span class="st">    data:</span></span>
-<span><span class="st">      type: duckdb</span></span>
-<span><span class="st">      query: SELECT lon, lat FROM hex_points</span></span>
-<span><span class="st">    getPosition: @@=[lon, lat]</span></span>
-<span><span class="st">    getElevationWeight: 1</span></span>
-<span><span class="st">    extruded: true</span></span>
-<span><span class="st">"</span></span>
-<span></span>
-<span><span class="fu"><a href="reference/deckgl.html">deckgl</a></span><span class="op">(</span>spec <span class="op">=</span> <span class="va">spec_yaml</span>, data <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>hex_points <span class="op">=</span> <span class="va">my_points</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
-</div>
+<span><span class="fu"><a href="reference/deckgl.html">deckgl</a></span><span class="op">(</span><span class="va">spec</span>, data <span class="op">=</span> <span class="va">data</span>, width <span class="op">=</span> <span class="st">"100%"</span>, height <span class="op">=</span> <span class="st">"500px"</span><span class="op">)</span></span></code></pre></div>
+<p><code><a href="reference/deckgl.html">deckgl()</a></code> accepts deck.gl JSON specs as R lists, JSON strings, YAML strings, or file paths; the format is auto-detected. Data passed via the <code>data</code> argument is registered as DuckDB tables that your <code>type = "duckdb"</code> data nodes can query.</p>
 </div>
 <div class="section level2">
 <h2 id="shiny-integration">Shiny integration<a class="anchor" aria-label="anchor" href="#shiny-integration"></a>
 </h2>
-<p>Drop the widget into a Shiny app using the provided UI and server helpers:</p>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://shiny.posit.co/" class="external-link">shiny</a></span><span class="op">)</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va">rDeckgl</span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">ui</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/shiny/man/fluidPage.html" class="external-link">fluidPage</a></span><span class="op">(</span></span>
-<span>  <span class="fu"><a href="https://rdrr.io/pkg/shiny/man/titlePanel.html" class="external-link">titlePanel</a></span><span class="op">(</span><span class="st">"Deck.gl in Shiny"</span><span class="op">)</span>,</span>
 <span>  <span class="fu"><a href="reference/deckglOutput.html">deckglOutput</a></span><span class="op">(</span><span class="st">"map"</span>, width <span class="op">=</span> <span class="st">"100%"</span>, height <span class="op">=</span> <span class="st">"600px"</span><span class="op">)</span></span>
 <span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">server</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">input</span>, <span class="va">output</span>, <span class="va">session</span><span class="op">)</span> <span class="op">{</span></span>
 <span>  <span class="va">output</span><span class="op">$</span><span class="va">map</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/renderDeckgl.html">renderDeckgl</a></span><span class="op">(</span><span class="op">{</span></span>
-<span>    <span class="fu"><a href="reference/deckgl.html">deckgl</a></span><span class="op">(</span>spec <span class="op">=</span> <span class="va">spec</span>, data <span class="op">=</span> <span class="va">data</span><span class="op">)</span></span>
+<span>    <span class="fu"><a href="reference/deckgl.html">deckgl</a></span><span class="op">(</span><span class="va">spec</span>, data <span class="op">=</span> <span class="va">data</span><span class="op">)</span></span>
 <span>  <span class="op">}</span><span class="op">)</span></span>
 <span><span class="op">}</span></span>
 <span></span>
 <span><span class="fu"><a href="https://rdrr.io/pkg/shiny/man/shinyApp.html" class="external-link">shinyApp</a></span><span class="op">(</span><span class="va">ui</span>, <span class="va">server</span><span class="op">)</span></span></code></pre></div>
-<p>Behind the scenes a single DuckDB in-memory database is created per widget. SQL queries declared in your spec (e.g. <code>SELECT * FROM trips</code>) are executed when deck.gl requests them through the widget’s message channel.</p>
 </div>
 <div class="section level2">
-<h2 id="data-hydration-workflow">Data hydration workflow<a class="anchor" aria-label="anchor" href="#data-hydration-workflow"></a>
+<h2 id="ggsql">ggsql<a class="anchor" aria-label="anchor" href="#ggsql"></a>
 </h2>
-<ol style="list-style-type: decimal">
-<li>Pass a named list of <code>data.frame</code>s via the <code>data</code> argument.</li>
-<li>Each entry becomes a DuckDB table with the same name.</li>
-<li>Use <code>data = list(type = "duckdb", query = "...")</code> inside your deck.gl spec to hydrate layers with query results.</li>
-<li>Factors are converted to character values before being sent to the browser to avoid JSON encoding issues.</li>
-</ol>
-<p>This design keeps large datasets in R until they are explicitly requested, so your widget remains responsive even with millions of rows.</p>
+<p><code><a href="reference/ggsql.html">ggsql()</a></code> exposes the same renderer through the <a href="https://posit.co/blog/announcing-ggsql/" class="external-link">ggsql</a> dialect — describe a deck.gl visualization with <code>VISUALIZE</code> / <code>DRAW</code> / <code>PLACE</code> / <code>SCALE</code> clauses instead of hand-writing JSON. See <code><a href="reference/ggsql.html">?ggsql</a></code> for the full reference.</p>
 </div>
 <div class="section level2">
-<h2 id="examples">Examples<a class="anchor" aria-label="anchor" href="#examples"></a>
-</h2>
-<p>The <code>Examples/</code> directory contains scripts that mirror common deck.gl use cases:</p>
-<ul>
-<li><code>Examples/00_quick_test.R</code></li>
-<li><code>Examples/01_basic_geoarrow_polygon.R</code></li>
-<li><code>Examples/02_hexagon_cells.R</code></li>
-<li><code>Examples/03_solid_polygon_3d.R</code></li>
-<li><code>Examples/05_geoarrow_scatterplot.R</code></li>
-</ul>
-<p>Run them with <code>source("Examples/00_quick_test.R")</code> after loading or installing the package from a local checkout.</p>
-</div>
-<div class="section level2">
-<h2 id="development">Development<a class="anchor" aria-label="anchor" href="#development"></a>
+<h2 id="learning-more">Learning more<a class="anchor" aria-label="anchor" href="#learning-more"></a>
 </h2>
 <ul>
-<li>Widget bindings live in <code>inst/htmlwidgets/deckgl.js</code> and use the bundled <code>inst/htmlwidgets/lib/deckgl/deckgl-bundle.js</code>.</li>
-<li>R-facing helpers (<code>deckgl</code>, <code>deckglOutput</code>, <code>renderDeckgl</code>) are under <code>R/</code>.</li>
-<li>Documentation is generated with roxygen2; run <code>devtools::document()</code> after editing roxygen comments.</li>
-<li>Use <code>devtools::load_all()</code> to iterate locally, then <code>devtools::install()</code> to produce a build.</li>
+<li>Vignette: <code><a href="articles/getting-started.html">vignette("getting-started", package = "rDeckgl")</a></code>
+</li>
+<li>Function reference: <code><a href="reference/deckgl.html">?deckgl</a></code>, <code><a href="reference/deckglOutput.html">?deckglOutput</a></code>, <code><a href="reference/renderDeckgl.html">?renderDeckgl</a></code>, <code><a href="reference/ggsql.html">?ggsql</a></code>
+</li>
 </ul>
-<p>Contributions and bug reports are welcome. Please report issues to the package maintainer listed in <code>DESCRIPTION</code>.</p>
+</div>
+<div class="section level2">
+<h2 id="contributing">Contributing<a class="anchor" aria-label="anchor" href="#contributing"></a>
+</h2>
+<p>Issues and pull requests are welcome on <a href="https://github.com/TiRizvanov/rDeckgl/issues" class="external-link">GitHub</a>. Please report bugs to the package maintainer listed in <code>DESCRIPTION</code>.</p>
+</div>
+<div class="section level2">
+<h2 id="license">License<a class="anchor" aria-label="anchor" href="#license"></a>
+</h2>
+<p>MIT — see <a href="LICENSE">LICENSE</a> and <a href="LICENSE.html">LICENSE.md</a> for the full text, including the third-party deck.gl license bundled with the JavaScript assets.</p>
 </div>
 <div class="section level2">
 <h2 id="acknowledgements">Acknowledgements<a class="anchor" aria-label="anchor" href="#acknowledgements"></a>
 </h2>
-<p>This package was developed in the <a href="https://www.drieslab.com/" class="external-link">Dries Lab</a> at Boston University. Funding support was provided by the Dries Lab and the Boston University Undergraduate Research Opportunities Program (UROP).</p>
+<p>Developed in the <a href="https://www.drieslab.com/" class="external-link">Dries Lab</a> at Boston University. Funding support was provided by the Dries Lab and the Boston University Undergraduate Research Opportunities Program (UROP).</p>
 </div>
 </div>
   </main><aside class="col-md-3"><div class="license">

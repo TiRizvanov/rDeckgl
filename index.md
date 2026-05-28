@@ -1,40 +1,32 @@
 # rDeckgl
 
-R bindings for [deck.gl](https://deck.gl) 9.2.2 that let you render
-large, interactive geospatial visualizations directly from R. The
-package wraps the deck.gl JSON interface inside an `htmlwidget`, adds
-convenient DuckDB-backed data hydration, and provides Shiny bindings so
-you can drop the widget into dashboards with minimal boilerplate.
-
-## Key features
-
-- Works with deck.gl JSON or YAML specifications, including
-  auto-detection of the format.
-- Registers in-memory data frames as DuckDB tables so specs can
-  reference server-side SQL queries.
-- Bundles deck.gl 9.2.2 along with the deck.gl JSON converter and
-  default loaders.
-- Ships with
-  [`deckglOutput()`](https://tirizvanov.github.io/rDeckgl/reference/deckglOutput.md)
-  /
-  [`renderDeckgl()`](https://tirizvanov.github.io/rDeckgl/reference/renderDeckgl.md)
-  helpers for seamless Shiny integration.
-- Includes runnable examples that illustrate common layers such as
-  scatterplot, polygon, hexagon heatmap, and Giotto geometries.
+R bindings for [deck.gl](https://deck.gl) 9.2.2. The package wraps the
+deck.gl JSON interface inside an
+[htmlwidget](https://www.htmlwidgets.org/), hydrates data through
+DuckDB, and ships Shiny bindings so you can drop interactive WebGL maps
+and large-data visualizations into any R workflow.
 
 ## Installation
 
-The package is not on CRAN yet. Install from source (e.g. using
-`devtools`):
+Once on CRAN:
 
 ``` r
 
-devtools::install()               # from a local checkout
+install.packages("rDeckgl")
 ```
 
-The htmlwidgets assets (deck.gl 9.2.2 bundle, CSS, and widget glue) are
-bundled under `inst/htmlwidgets`, so no extra JavaScript setup is
-required.
+Development version from GitHub:
+
+``` r
+
+# install.packages("remotes")
+remotes::install_github("TiRizvanov/rDeckgl")
+```
+
+The deck.gl 9.2.2 JavaScript bundle, JSON converter, default loaders,
+CSS, and widget glue are pre-built and shipped under
+`inst/htmlwidgets/`, so no Node or JavaScript tooling is required at
+runtime.
 
 ## Quick start
 
@@ -44,19 +36,12 @@ library(rDeckgl)
 
 spec <- list(
   `@@type` = "DeckGL",
-  initialViewState = list(
-    longitude = -122.4,
-    latitude  = 37.76,
-    zoom      = 12
-  ),
+  initialViewState = list(longitude = -122.4, latitude = 37.76, zoom = 12),
   layers = list(
     list(
       `@@type` = "ScatterplotLayer",
-      id   = "scatterplot",
-      data = list(
-        type  = "duckdb",
-        query = "SELECT lon, lat, radius FROM points"
-      ),
+      id   = "points",
+      data = list(type = "duckdb", query = "SELECT lon, lat, radius FROM points"),
       getPosition  = "@@=[lon, lat]",
       getRadius    = "@@=radius",
       getFillColor = c(255, 0, 0)
@@ -66,46 +51,22 @@ spec <- list(
 
 data <- list(
   points = data.frame(
-    lon    = c(-122.4, -122.45, -122.35),
-    lat    = c(37.76, 37.78, 37.74),
-    radius = c(100, 150, 200)
+    lon    = c(-122.40, -122.45, -122.35),
+    lat    = c( 37.76,   37.78,   37.74),
+    radius = c(100,      150,     200)
   )
 )
 
-deckgl(spec = spec, data = data, width = "100%", height = "500px")
+deckgl(spec, data = data, width = "100%", height = "500px")
 ```
 
-### YAML specs
-
-Specs can also be authored in YAML and read from a file or string. The
-widget automatically converts YAML to JSON before hydration.
-
-``` r
-
-spec_yaml <- "
-@@type: DeckGL
-initialViewState:
-  longitude: -122.4
-  latitude: 37.76
-  zoom: 11
-layers:
-  - @@type: HexagonLayer
-    id: hex-layer
-    data:
-      type: duckdb
-      query: SELECT lon, lat FROM hex_points
-    getPosition: @@=[lon, lat]
-    getElevationWeight: 1
-    extruded: true
-"
-
-deckgl(spec = spec_yaml, data = list(hex_points = my_points))
-```
+[`deckgl()`](https://tirizvanov.github.io/rDeckgl/reference/deckgl.md)
+accepts deck.gl JSON specs as R lists, JSON strings, YAML strings, or
+file paths; the format is auto-detected. Data passed via the `data`
+argument is registered as DuckDB tables that your `type = "duckdb"` data
+nodes can query.
 
 ## Shiny integration
-
-Drop the widget into a Shiny app using the provided UI and server
-helpers:
 
 ``` r
 
@@ -113,67 +74,53 @@ library(shiny)
 library(rDeckgl)
 
 ui <- fluidPage(
-  titlePanel("Deck.gl in Shiny"),
   deckglOutput("map", width = "100%", height = "600px")
 )
 
 server <- function(input, output, session) {
   output$map <- renderDeckgl({
-    deckgl(spec = spec, data = data)
+    deckgl(spec, data = data)
   })
 }
 
 shinyApp(ui, server)
 ```
 
-Behind the scenes a single DuckDB in-memory database is created per
-widget. SQL queries declared in your spec (e.g. `SELECT * FROM trips`)
-are executed when deck.gl requests them through the widget’s message
-channel.
+## ggsql
 
-## Data hydration workflow
+[`ggsql()`](https://tirizvanov.github.io/rDeckgl/reference/ggsql.md)
+exposes the same renderer through the
+[ggsql](https://posit.co/blog/announcing-ggsql/) dialect — describe a
+deck.gl visualization with `VISUALIZE` / `DRAW` / `PLACE` / `SCALE`
+clauses instead of hand-writing JSON. See
+[`?ggsql`](https://tirizvanov.github.io/rDeckgl/reference/ggsql.md) for
+the full reference.
 
-1.  Pass a named list of `data.frame`s via the `data` argument.
-2.  Each entry becomes a DuckDB table with the same name.
-3.  Use `data = list(type = "duckdb", query = "...")` inside your
-    deck.gl spec to hydrate layers with query results.
-4.  Factors are converted to character values before being sent to the
-    browser to avoid JSON encoding issues.
+## Learning more
 
-This design keeps large datasets in R until they are explicitly
-requested, so your widget remains responsive even with millions of rows.
+- Vignette:
+  [`vignette("getting-started", package = "rDeckgl")`](https://tirizvanov.github.io/rDeckgl/articles/getting-started.md)
+- Function reference:
+  [`?deckgl`](https://tirizvanov.github.io/rDeckgl/reference/deckgl.md),
+  [`?deckglOutput`](https://tirizvanov.github.io/rDeckgl/reference/deckglOutput.md),
+  [`?renderDeckgl`](https://tirizvanov.github.io/rDeckgl/reference/renderDeckgl.md),
+  [`?ggsql`](https://tirizvanov.github.io/rDeckgl/reference/ggsql.md)
 
-## Examples
+## Contributing
 
-The `Examples/` directory contains scripts that mirror common deck.gl
-use cases:
+Issues and pull requests are welcome on
+[GitHub](https://github.com/TiRizvanov/rDeckgl/issues). Please report
+bugs to the package maintainer listed in `DESCRIPTION`.
 
-- `Examples/00_quick_test.R`
-- `Examples/01_basic_geoarrow_polygon.R`
-- `Examples/02_hexagon_cells.R`
-- `Examples/03_solid_polygon_3d.R`
-- `Examples/05_geoarrow_scatterplot.R`
+## License
 
-Run them with `source("Examples/00_quick_test.R")` after loading or
-installing the package from a local checkout.
-
-## Development
-
-- Widget bindings live in `inst/htmlwidgets/deckgl.js` and use the
-  bundled `inst/htmlwidgets/lib/deckgl/deckgl-bundle.js`.
-- R-facing helpers (`deckgl`, `deckglOutput`, `renderDeckgl`) are under
-  `R/`.
-- Documentation is generated with roxygen2; run `devtools::document()`
-  after editing roxygen comments.
-- Use `devtools::load_all()` to iterate locally, then
-  `devtools::install()` to produce a build.
-
-Contributions and bug reports are welcome. Please report issues to the
-package maintainer listed in `DESCRIPTION`.
+MIT — see [LICENSE](https://tirizvanov.github.io/rDeckgl/LICENSE) and
+[LICENSE.md](https://tirizvanov.github.io/rDeckgl/LICENSE.md) for the
+full text, including the third-party deck.gl license bundled with the
+JavaScript assets.
 
 ## Acknowledgements
 
-This package was developed in the [Dries Lab](https://www.drieslab.com/)
-at Boston University. Funding support was provided by the Dries Lab and
-the Boston University Undergraduate Research Opportunities Program
-(UROP).
+Developed in the [Dries Lab](https://www.drieslab.com/) at Boston
+University. Funding support was provided by the Dries Lab and the Boston
+University Undergraduate Research Opportunities Program (UROP).
