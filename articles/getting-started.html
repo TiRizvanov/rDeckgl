@@ -521,193 +521,67 @@ folder required.</p>
 <span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level3">
-<h3 id="simple-geoarrow-polygons">Simple GeoArrow polygons<a class="anchor" aria-label="anchor" href="#simple-geoarrow-polygons"></a>
-</h3>
-<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/TiRizvanov/rDeckgl" class="external-link">rDeckgl</a></span><span class="op">)</span></span>
-<span></span>
-<span><span class="va">con</span> <span class="op">&lt;-</span> <span class="fu">DBI</span><span class="fu">::</span><span class="fu"><a href="https://dbi.r-dbi.org/reference/dbConnect.html" class="external-link">dbConnect</a></span><span class="op">(</span><span class="fu">duckdb</span><span class="fu">::</span><span class="fu"><a href="https://r.duckdb.org/reference/duckdb.html" class="external-link">duckdb</a></span><span class="op">(</span><span class="op">)</span>, dbdir <span class="op">=</span> <span class="st">":memory:"</span><span class="op">)</span></span>
-<span></span>
-<span><span class="kw">for</span> <span class="op">(</span><span class="va">sql</span> <span class="kw">in</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"INSTALL spatial"</span>, <span class="st">"LOAD spatial"</span>,</span>
-<span>              <span class="st">"INSTALL nanoarrow FROM community"</span>, <span class="st">"LOAD nanoarrow"</span>,</span>
-<span>              <span class="st">"CALL register_geoarrow_extensions()"</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
-<span>  <span class="kw"><a href="https://rdrr.io/r/base/try.html" class="external-link">try</a></span><span class="op">(</span><span class="fu">DBI</span><span class="fu">::</span><span class="fu"><a href="https://dbi.r-dbi.org/reference/dbExecute.html" class="external-link">dbExecute</a></span><span class="op">(</span><span class="va">con</span>, <span class="va">sql</span><span class="op">)</span>, silent <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
-<span><span class="op">}</span></span>
-<span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">42</span><span class="op">)</span></span>
-<span><span class="va">n_polygons</span> <span class="op">&lt;-</span> <span class="fl">50</span></span>
-<span></span>
-<span><span class="va">polygons_data</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
-<span>  id <span class="op">=</span> <span class="fl">1</span><span class="op">:</span><span class="va">n_polygons</span>,</span>
-<span>  center_x <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/stats/Uniform.html" class="external-link">runif</a></span><span class="op">(</span><span class="va">n_polygons</span>, <span class="op">-</span><span class="fl">122.5</span>, <span class="op">-</span><span class="fl">122.3</span><span class="op">)</span>,</span>
-<span>  center_y <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/stats/Uniform.html" class="external-link">runif</a></span><span class="op">(</span><span class="va">n_polygons</span>, <span class="fl">37.7</span>, <span class="fl">37.85</span><span class="op">)</span>,</span>
-<span>  size <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/stats/Uniform.html" class="external-link">runif</a></span><span class="op">(</span><span class="va">n_polygons</span>, <span class="fl">0.005</span>, <span class="fl">0.015</span><span class="op">)</span>,</span>
-<span>  value <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/stats/Uniform.html" class="external-link">runif</a></span><span class="op">(</span><span class="va">n_polygons</span>, <span class="fl">0</span>, <span class="fl">1</span><span class="op">)</span></span>
-<span><span class="op">)</span></span>
-<span></span>
-<span><span class="va">polygons_data</span><span class="op">$</span><span class="va">wkt</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/apply.html" class="external-link">apply</a></span><span class="op">(</span><span class="va">polygons_data</span>, <span class="fl">1</span>, <span class="kw">function</span><span class="op">(</span><span class="va">row</span><span class="op">)</span> <span class="op">{</span></span>
-<span>  <span class="va">cx</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">as.numeric</a></span><span class="op">(</span><span class="va">row</span><span class="op">[</span><span class="st">"center_x"</span><span class="op">]</span><span class="op">)</span></span>
-<span>  <span class="va">cy</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">as.numeric</a></span><span class="op">(</span><span class="va">row</span><span class="op">[</span><span class="st">"center_y"</span><span class="op">]</span><span class="op">)</span></span>
-<span>  <span class="va">s</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">as.numeric</a></span><span class="op">(</span><span class="va">row</span><span class="op">[</span><span class="st">"size"</span><span class="op">]</span><span class="op">)</span></span>
-<span>  <span class="fu"><a href="https://rdrr.io/r/base/sprintf.html" class="external-link">sprintf</a></span><span class="op">(</span></span>
-<span>    <span class="st">"POLYGON((%f %f, %f %f, %f %f, %f %f, %f %f))"</span>,</span>
-<span>    <span class="va">cx</span> <span class="op">-</span> <span class="va">s</span>, <span class="va">cy</span> <span class="op">-</span> <span class="va">s</span>,</span>
-<span>    <span class="va">cx</span> <span class="op">+</span> <span class="va">s</span>, <span class="va">cy</span> <span class="op">-</span> <span class="va">s</span>,</span>
-<span>    <span class="va">cx</span> <span class="op">+</span> <span class="va">s</span>, <span class="va">cy</span> <span class="op">+</span> <span class="va">s</span>,</span>
-<span>    <span class="va">cx</span> <span class="op">-</span> <span class="va">s</span>, <span class="va">cy</span> <span class="op">+</span> <span class="va">s</span>,</span>
-<span>    <span class="va">cx</span> <span class="op">-</span> <span class="va">s</span>, <span class="va">cy</span> <span class="op">-</span> <span class="va">s</span></span>
-<span>  <span class="op">)</span></span>
-<span><span class="op">}</span><span class="op">)</span></span>
-<span></span>
-<span><span class="fu">DBI</span><span class="fu">::</span><span class="fu"><a href="https://dbi.r-dbi.org/reference/dbWriteTable.html" class="external-link">dbWriteTable</a></span><span class="op">(</span><span class="va">con</span>, <span class="st">"polygon_data"</span>, <span class="va">polygons_data</span>, overwrite <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
-<span></span>
-<span><span class="fu">DBI</span><span class="fu">::</span><span class="fu"><a href="https://dbi.r-dbi.org/reference/dbExecute.html" class="external-link">dbExecute</a></span><span class="op">(</span><span class="va">con</span>, <span class="st">"</span></span>
-<span><span class="st">  CREATE TABLE polygons_geoarrow AS</span></span>
-<span><span class="st">  SELECT</span></span>
-<span><span class="st">    id,</span></span>
-<span><span class="st">    'Polygon ' || id AS name,</span></span>
-<span><span class="st">    value,</span></span>
-<span><span class="st">    ST_GeomFromText(wkt) AS geometry</span></span>
-<span><span class="st">  FROM polygon_data</span></span>
-<span><span class="st">"</span><span class="op">)</span></span>
-<span></span>
-<span><span class="va">spec</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
-<span>  `@@type` <span class="op">=</span> <span class="st">"DeckGL"</span>,</span>
-<span>  initialViewState <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
-<span>    longitude <span class="op">=</span> <span class="op">-</span><span class="fl">122.4</span>,</span>
-<span>    latitude <span class="op">=</span> <span class="fl">37.78</span>,</span>
-<span>    zoom <span class="op">=</span> <span class="fl">11</span>,</span>
-<span>    pitch <span class="op">=</span> <span class="fl">45</span>,</span>
-<span>    bearing <span class="op">=</span> <span class="fl">0</span></span>
-<span>  <span class="op">)</span>,</span>
-<span>  views <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
-<span>    <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
-<span>      `@@type` <span class="op">=</span> <span class="st">"MapView"</span>,</span>
-<span>      controller <span class="op">=</span> <span class="cn">TRUE</span>,</span>
-<span>      mapStyle <span class="op">=</span> <span class="st">"https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json"</span></span>
-<span>    <span class="op">)</span></span>
-<span>  <span class="op">)</span>,</span>
-<span>  layers <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
-<span>    <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
-<span>      `@@type` <span class="op">=</span> <span class="st">"GeoArrowSolidPolygonLayer"</span>,</span>
-<span>      id <span class="op">=</span> <span class="st">"geoarrow-polygons"</span>,</span>
-<span>      data <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
-<span>        type <span class="op">=</span> <span class="st">"duckdb"</span>,</span>
-<span>        query <span class="op">=</span> <span class="st">"SELECT id, name, value, geometry FROM polygons_geoarrow"</span>,</span>
-<span>        format <span class="op">=</span> <span class="st">"geoarrow"</span></span>
-<span>      <span class="op">)</span>,</span>
-<span>      getFillColor <span class="op">=</span> <span class="st">"@@=[value * 255, (1 - value) * 200, 100, 180]"</span>,</span>
-<span>      getElevation <span class="op">=</span> <span class="st">"@@=value * 1000"</span>,</span>
-<span>      extruded <span class="op">=</span> <span class="cn">TRUE</span>,</span>
-<span>      pickable <span class="op">=</span> <span class="cn">TRUE</span></span>
-<span>    <span class="op">)</span></span>
-<span>  <span class="op">)</span></span>
-<span><span class="op">)</span></span>
-<span></span>
-<span><span class="va">widget</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/deckgl.html">deckgl</a></span><span class="op">(</span></span>
-<span>  spec <span class="op">=</span> <span class="va">spec</span>,</span>
-<span>  con <span class="op">=</span> <span class="va">con</span>,</span>
-<span>  width <span class="op">=</span> <span class="st">"100%"</span>,</span>
-<span>  height <span class="op">=</span> <span class="st">"600px"</span></span>
-<span><span class="op">)</span></span>
-<span></span>
-<span><span class="fu">DBI</span><span class="fu">::</span><span class="fu"><a href="https://dbi.r-dbi.org/reference/dbDisconnect.html" class="external-link">dbDisconnect</a></span><span class="op">(</span><span class="va">con</span><span class="op">)</span></span>
-<span></span>
-<span><span class="va">widget</span></span></code></pre></div>
-</div>
-<div class="section level3">
 <h3 id="utah-building-footprints-geoarrow">Utah building footprints (GeoArrow)<a class="anchor" aria-label="anchor" href="#utah-building-footprints-geoarrow"></a>
 </h3>
 <p>This script renders the Utah portion of the <a href="https://github.com/microsoft/USBuildingFootprints" class="external-link">Microsoft
 USBuildingFootprints</a> dataset as GeoArrow polygons. Create a
 GeoParquet with GeoArrow-encoded geometries from the upstream ZIP:</p>
-<div class="sourceCode" id="cb8"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb8-1"><a href="#cb8-1" tabindex="-1"></a><span class="ex">ogr2ogr</span> <span class="dt">\</span></span>
-<span id="cb8-2"><a href="#cb8-2" tabindex="-1"></a>  Utah.parquet <span class="dt">\</span></span>
-<span id="cb8-3"><a href="#cb8-3" tabindex="-1"></a>  /vsizip/Utah.geojson.zip <span class="dt">\</span></span>
-<span id="cb8-4"><a href="#cb8-4" tabindex="-1"></a>  <span class="at">-dialect</span> SQLite <span class="dt">\</span></span>
-<span id="cb8-5"><a href="#cb8-5" tabindex="-1"></a>  <span class="at">-sql</span> <span class="st">"SELECT geometry FROM 'Utah.geojson'"</span> <span class="dt">\</span></span>
-<span id="cb8-6"><a href="#cb8-6" tabindex="-1"></a>  <span class="at">-lco</span> COMPRESSION=BROTLI <span class="dt">\</span></span>
-<span id="cb8-7"><a href="#cb8-7" tabindex="-1"></a>  <span class="at">-lco</span> GEOMETRY_ENCODING=GEOARROW <span class="dt">\</span></span>
-<span id="cb8-8"><a href="#cb8-8" tabindex="-1"></a>  <span class="at">-lco</span> POLYGON_ORIENTATION=COUNTERCLOCKWISE <span class="dt">\</span></span>
-<span id="cb8-9"><a href="#cb8-9" tabindex="-1"></a>  <span class="at">-lco</span> ROW_GROUP_SIZE=9999999</span></code></pre></div>
-<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb7"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb7-1"><a href="#cb7-1" tabindex="-1"></a><span class="ex">ogr2ogr</span> <span class="dt">\</span></span>
+<span id="cb7-2"><a href="#cb7-2" tabindex="-1"></a>  Utah.parquet <span class="dt">\</span></span>
+<span id="cb7-3"><a href="#cb7-3" tabindex="-1"></a>  /vsizip/Utah.geojson.zip <span class="dt">\</span></span>
+<span id="cb7-4"><a href="#cb7-4" tabindex="-1"></a>  <span class="at">-dialect</span> SQLite <span class="dt">\</span></span>
+<span id="cb7-5"><a href="#cb7-5" tabindex="-1"></a>  <span class="at">-sql</span> <span class="st">"SELECT geometry FROM 'Utah.geojson'"</span> <span class="dt">\</span></span>
+<span id="cb7-6"><a href="#cb7-6" tabindex="-1"></a>  <span class="at">-lco</span> COMPRESSION=BROTLI <span class="dt">\</span></span>
+<span id="cb7-7"><a href="#cb7-7" tabindex="-1"></a>  <span class="at">-lco</span> GEOMETRY_ENCODING=GEOARROW <span class="dt">\</span></span>
+<span id="cb7-8"><a href="#cb7-8" tabindex="-1"></a>  <span class="at">-lco</span> POLYGON_ORIENTATION=COUNTERCLOCKWISE <span class="dt">\</span></span>
+<span id="cb7-9"><a href="#cb7-9" tabindex="-1"></a>  <span class="at">-lco</span> ROW_GROUP_SIZE=9999999</span></code></pre></div>
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/TiRizvanov/rDeckgl" class="external-link">rDeckgl</a></span><span class="op">)</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/apache/arrow/" class="external-link">arrow</a></span><span class="op">)</span></span>
-<span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"╔═══════════════════════════════════════════════════════════════╗\n"</span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"║  Working GeoArrow Example (up to 50k buildings)              ║\n"</span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"╚═══════════════════════════════════════════════════════════════╝\n\n"</span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">parquet_path</span> <span class="op">&lt;-</span> <span class="st">"Utah.parquet"</span></span>
 <span></span>
 <span><span class="kw">if</span> <span class="op">(</span><span class="op">!</span><span class="fu"><a href="https://rdrr.io/r/base/files.html" class="external-link">file.exists</a></span><span class="op">(</span><span class="va">parquet_path</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
-<span>  <span class="kw"><a href="https://rdrr.io/r/base/stop.html" class="external-link">stop</a></span><span class="op">(</span><span class="st">"❌ Parquet file not found: "</span>, <span class="va">parquet_path</span><span class="op">)</span></span>
+<span>  <span class="kw"><a href="https://rdrr.io/r/base/stop.html" class="external-link">stop</a></span><span class="op">(</span><span class="st">"Parquet file not found: "</span>, <span class="va">parquet_path</span><span class="op">)</span></span>
 <span><span class="op">}</span></span>
-<span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"📦 Reading Parquet file...\n"</span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">parquet_data</span> <span class="op">&lt;-</span> <span class="fu">arrow</span><span class="fu">::</span><span class="fu"><a href="https://arrow.apache.org/docs/r/reference/read_parquet.html" class="external-link">read_parquet</a></span><span class="op">(</span><span class="va">parquet_path</span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"   Total rows in file:"</span>, <span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">nrow</a></span><span class="op">(</span><span class="va">parquet_data</span><span class="op">)</span>, <span class="st">"\n"</span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">max_rows</span> <span class="op">&lt;-</span> <span class="fl">1000000</span></span>
-<span><span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">nrow</a></span><span class="op">(</span><span class="va">parquet_data</span><span class="op">)</span> <span class="op">&gt;</span> <span class="va">max_rows</span><span class="op">)</span> <span class="op">{</span></span>
-<span>  <span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"   Sampling"</span>, <span class="va">max_rows</span>, <span class="st">"rows (use URL-loading for full dataset)\n"</span><span class="op">)</span></span>
-<span>  <span class="va">sample_data</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">parquet_data</span>, <span class="va">max_rows</span><span class="op">)</span></span>
+<span><span class="va">sample_data</span> <span class="op">&lt;-</span> <span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">nrow</a></span><span class="op">(</span><span class="va">parquet_data</span><span class="op">)</span> <span class="op">&gt;</span> <span class="va">max_rows</span><span class="op">)</span> <span class="op">{</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">parquet_data</span>, <span class="va">max_rows</span><span class="op">)</span></span>
 <span><span class="op">}</span> <span class="kw">else</span> <span class="op">{</span></span>
-<span>  <span class="va">sample_data</span> <span class="op">&lt;-</span> <span class="va">parquet_data</span></span>
+<span>  <span class="va">parquet_data</span></span>
 <span><span class="op">}</span></span>
 <span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"✅ Using"</span>, <span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">nrow</a></span><span class="op">(</span><span class="va">sample_data</span><span class="op">)</span>, <span class="st">"buildings\n\n"</span><span class="op">)</span></span>
-<span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"📍 Computing density center...\n"</span><span class="op">)</span></span>
+<span><span class="co"># Locate the densest cluster of buildings to centre the initial view</span></span>
 <span><span class="va">bbox_data</span> <span class="op">&lt;-</span> <span class="va">sample_data</span><span class="op">$</span><span class="va">GEOMETRY_bbox</span></span>
 <span><span class="kw">if</span> <span class="op">(</span><span class="op">!</span><span class="fu"><a href="https://rdrr.io/r/base/NULL.html" class="external-link">is.null</a></span><span class="op">(</span><span class="va">bbox_data</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
-<span>  <span class="va">xmin</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">as.numeric</a></span><span class="op">(</span><span class="va">bbox_data</span><span class="op">$</span><span class="va">xmin</span><span class="op">)</span></span>
-<span>  <span class="va">xmax</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">as.numeric</a></span><span class="op">(</span><span class="va">bbox_data</span><span class="op">$</span><span class="va">xmax</span><span class="op">)</span></span>
-<span>  <span class="va">ymin</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">as.numeric</a></span><span class="op">(</span><span class="va">bbox_data</span><span class="op">$</span><span class="va">ymin</span><span class="op">)</span></span>
-<span>  <span class="va">ymax</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">as.numeric</a></span><span class="op">(</span><span class="va">bbox_data</span><span class="op">$</span><span class="va">ymax</span><span class="op">)</span></span>
+<span>  <span class="va">cx</span> <span class="op">&lt;-</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">as.numeric</a></span><span class="op">(</span><span class="va">bbox_data</span><span class="op">$</span><span class="va">xmin</span><span class="op">)</span> <span class="op">+</span> <span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">as.numeric</a></span><span class="op">(</span><span class="va">bbox_data</span><span class="op">$</span><span class="va">xmax</span><span class="op">)</span><span class="op">)</span> <span class="op">/</span> <span class="fl">2</span></span>
+<span>  <span class="va">cy</span> <span class="op">&lt;-</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">as.numeric</a></span><span class="op">(</span><span class="va">bbox_data</span><span class="op">$</span><span class="va">ymin</span><span class="op">)</span> <span class="op">+</span> <span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">as.numeric</a></span><span class="op">(</span><span class="va">bbox_data</span><span class="op">$</span><span class="va">ymax</span><span class="op">)</span><span class="op">)</span> <span class="op">/</span> <span class="fl">2</span></span>
 <span></span>
-<span>  <span class="va">cx</span> <span class="op">&lt;-</span> <span class="op">(</span><span class="va">xmin</span> <span class="op">+</span> <span class="va">xmax</span><span class="op">)</span> <span class="op">/</span> <span class="fl">2</span></span>
-<span>  <span class="va">cy</span> <span class="op">&lt;-</span> <span class="op">(</span><span class="va">ymin</span> <span class="op">+</span> <span class="va">ymax</span><span class="op">)</span> <span class="op">/</span> <span class="fl">2</span></span>
+<span>  <span class="va">grid_key</span>     <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">floor</a></span><span class="op">(</span><span class="va">cx</span> <span class="op">/</span> <span class="fl">0.1</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">floor</a></span><span class="op">(</span><span class="va">cy</span> <span class="op">/</span> <span class="fl">0.1</span><span class="op">)</span>, sep <span class="op">=</span> <span class="st">","</span><span class="op">)</span></span>
+<span>  <span class="va">densest_cell</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/which.min.html" class="external-link">which.max</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/table.html" class="external-link">table</a></span><span class="op">(</span><span class="va">grid_key</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
+<span>  <span class="va">idx</span>          <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/which.html" class="external-link">which</a></span><span class="op">(</span><span class="va">grid_key</span> <span class="op">==</span> <span class="va">densest_cell</span><span class="op">)</span></span>
 <span></span>
-<span>  <span class="va">grid_size</span> <span class="op">&lt;-</span> <span class="fl">0.1</span></span>
-<span>  <span class="va">grid_x</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">floor</a></span><span class="op">(</span><span class="va">cx</span> <span class="op">/</span> <span class="va">grid_size</span><span class="op">)</span></span>
-<span>  <span class="va">grid_y</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">floor</a></span><span class="op">(</span><span class="va">cy</span> <span class="op">/</span> <span class="va">grid_size</span><span class="op">)</span></span>
-<span>  <span class="va">grid_key</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste</a></span><span class="op">(</span><span class="va">grid_x</span>, <span class="va">grid_y</span>, sep <span class="op">=</span> <span class="st">","</span><span class="op">)</span></span>
-<span></span>
-<span>  <span class="va">grid_counts</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/table.html" class="external-link">table</a></span><span class="op">(</span><span class="va">grid_key</span><span class="op">)</span></span>
-<span>  <span class="va">densest_cell</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/which.min.html" class="external-link">which.max</a></span><span class="op">(</span><span class="va">grid_counts</span><span class="op">)</span><span class="op">)</span></span>
-<span>  <span class="va">densest_count</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/Extremes.html" class="external-link">max</a></span><span class="op">(</span><span class="va">grid_counts</span><span class="op">)</span></span>
-<span>  <span class="va">densest_indices</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/which.html" class="external-link">which</a></span><span class="op">(</span><span class="va">grid_key</span> <span class="op">==</span> <span class="va">densest_cell</span><span class="op">)</span></span>
-<span></span>
-<span>  <span class="va">center_lon</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/mean.html" class="external-link">mean</a></span><span class="op">(</span><span class="va">cx</span><span class="op">[</span><span class="va">densest_indices</span><span class="op">]</span>, na.rm <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
-<span>  <span class="va">center_lat</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/mean.html" class="external-link">mean</a></span><span class="op">(</span><span class="va">cy</span><span class="op">[</span><span class="va">densest_indices</span><span class="op">]</span>, na.rm <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
-<span></span>
-<span>  <span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"   Found densest area with"</span>, <span class="va">densest_count</span>, <span class="st">"buildings\n"</span><span class="op">)</span></span>
-<span>  <span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"   Center: ["</span>, <span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="va">center_lon</span>, <span class="fl">4</span><span class="op">)</span>, <span class="st">", "</span>, <span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="va">center_lat</span>, <span class="fl">4</span><span class="op">)</span>, <span class="st">"]\n\n"</span>, sep <span class="op">=</span> <span class="st">""</span><span class="op">)</span></span>
+<span>  <span class="va">center_lon</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/mean.html" class="external-link">mean</a></span><span class="op">(</span><span class="va">cx</span><span class="op">[</span><span class="va">idx</span><span class="op">]</span>, na.rm <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
+<span>  <span class="va">center_lat</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/mean.html" class="external-link">mean</a></span><span class="op">(</span><span class="va">cy</span><span class="op">[</span><span class="va">idx</span><span class="op">]</span>, na.rm <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
 <span><span class="op">}</span> <span class="kw">else</span> <span class="op">{</span></span>
 <span>  <span class="va">center_lon</span> <span class="op">&lt;-</span> <span class="op">-</span><span class="fl">110.4144</span></span>
-<span>  <span class="va">center_lat</span> <span class="op">&lt;-</span> <span class="fl">39.4991</span></span>
-<span>  <span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"   Using default center (no bbox data)\n\n"</span><span class="op">)</span></span>
+<span>  <span class="va">center_lat</span> <span class="op">&lt;-</span>   <span class="fl">39.4991</span></span>
 <span><span class="op">}</span></span>
 <span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"🔧 Converting to Arrow IPC...\n"</span><span class="op">)</span></span>
-<span></span>
+<span><span class="co"># Encode the Arrow table as base64 IPC for inline delivery</span></span>
 <span><span class="va">arrow_table</span> <span class="op">&lt;-</span> <span class="fu">arrow</span><span class="fu">::</span><span class="fu"><a href="https://arrow.apache.org/docs/r/reference/table.html" class="external-link">arrow_table</a></span><span class="op">(</span><span class="va">sample_data</span><span class="op">)</span></span>
-<span><span class="va">temp_file</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempfile</a></span><span class="op">(</span>fileext <span class="op">=</span> <span class="st">".arrows"</span><span class="op">)</span></span>
+<span><span class="va">temp_file</span>   <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempfile</a></span><span class="op">(</span>fileext <span class="op">=</span> <span class="st">".arrows"</span><span class="op">)</span></span>
 <span><span class="fu">arrow</span><span class="fu">::</span><span class="fu"><a href="https://arrow.apache.org/docs/r/reference/write_ipc_stream.html" class="external-link">write_ipc_stream</a></span><span class="op">(</span><span class="va">arrow_table</span>, <span class="va">temp_file</span><span class="op">)</span></span>
 <span><span class="va">arrow_bytes</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/readBin.html" class="external-link">readBin</a></span><span class="op">(</span><span class="va">temp_file</span>, <span class="st">"raw"</span>, n <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/file.info.html" class="external-link">file.info</a></span><span class="op">(</span><span class="va">temp_file</span><span class="op">)</span><span class="op">$</span><span class="va">size</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/unlink.html" class="external-link">unlink</a></span><span class="op">(</span><span class="va">temp_file</span><span class="op">)</span></span>
 <span><span class="va">arrow_b64</span> <span class="op">&lt;-</span> <span class="fu">base64enc</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/base64enc/man/base64.html" class="external-link">base64encode</a></span><span class="op">(</span><span class="va">arrow_bytes</span><span class="op">)</span></span>
 <span></span>
-<span><span class="va">size_mb</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="va">arrow_bytes</span><span class="op">)</span> <span class="op">/</span> <span class="fl">1024</span> <span class="op">/</span> <span class="fl">1024</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"✅ Encoded"</span>, <span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="va">size_mb</span>, <span class="fl">1</span><span class="op">)</span>, <span class="st">"MB\n"</span><span class="op">)</span></span>
-<span><span class="kw">if</span> <span class="op">(</span><span class="va">size_mb</span> <span class="op">&gt;</span> <span class="fl">50</span><span class="op">)</span> <span class="op">{</span></span>
-<span>  <span class="kw"><a href="https://rdrr.io/r/base/warning.html" class="external-link">warning</a></span><span class="op">(</span><span class="st">"⚠️  Data &gt; 50MB may cause browser issues!"</span><span class="op">)</span></span>
+<span><span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="va">arrow_bytes</span><span class="op">)</span> <span class="op">/</span> <span class="fl">1024</span> <span class="op">/</span> <span class="fl">1024</span> <span class="op">&gt;</span> <span class="fl">50</span><span class="op">)</span> <span class="op">{</span></span>
+<span>  <span class="kw"><a href="https://rdrr.io/r/base/warning.html" class="external-link">warning</a></span><span class="op">(</span><span class="st">"Encoded payload exceeds 50 MB and may cause browser issues."</span><span class="op">)</span></span>
 <span><span class="op">}</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"\n"</span><span class="op">)</span></span>
-<span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"🎨 Creating deck.gl spec centered at ["</span>, <span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="va">center_lon</span>, <span class="fl">4</span><span class="op">)</span>, <span class="st">", "</span>, <span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="va">center_lat</span>, <span class="fl">4</span><span class="op">)</span>, <span class="st">"]...\n"</span>, sep <span class="op">=</span> <span class="st">""</span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">spec</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
 <span>  `@@type` <span class="op">=</span> <span class="st">"DeckGL"</span>,</span>
@@ -715,49 +589,28 @@ GeoParquet with GeoArrow-encoded geometries from the upstream ZIP:</p>
 <span>  height <span class="op">=</span> <span class="fl">768</span>,</span>
 <span>  initialViewState <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
 <span>    longitude <span class="op">=</span> <span class="va">center_lon</span>,</span>
-<span>    latitude <span class="op">=</span> <span class="va">center_lat</span>,</span>
-<span>    zoom <span class="op">=</span> <span class="fl">12</span>,</span>
-<span>    pitch <span class="op">=</span> <span class="fl">0</span>,</span>
-<span>    bearing <span class="op">=</span> <span class="fl">0</span></span>
+<span>    latitude  <span class="op">=</span> <span class="va">center_lat</span>,</span>
+<span>    zoom      <span class="op">=</span> <span class="fl">12</span>,</span>
+<span>    pitch     <span class="op">=</span> <span class="fl">0</span>,</span>
+<span>    bearing   <span class="op">=</span> <span class="fl">0</span></span>
 <span>  <span class="op">)</span>,</span>
 <span>  controller <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  layers <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
 <span>    <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
-<span>      `@@type` <span class="op">=</span> <span class="st">"GeoArrowSolidPolygonLayer"</span>,</span>
-<span>      id <span class="op">=</span> <span class="st">"utah-buildings"</span>,</span>
-<span>      data <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>`__arrow` <span class="op">=</span> <span class="va">arrow_b64</span><span class="op">)</span>,</span>
+<span>      `@@type`       <span class="op">=</span> <span class="st">"GeoArrowSolidPolygonLayer"</span>,</span>
+<span>      id             <span class="op">=</span> <span class="st">"utah-buildings"</span>,</span>
+<span>      data           <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>`__arrow` <span class="op">=</span> <span class="va">arrow_b64</span><span class="op">)</span>,</span>
 <span>      geometryColumn <span class="op">=</span> <span class="st">"GEOMETRY"</span>,</span>
-<span>      getFillColor <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">255</span>, <span class="fl">100</span>, <span class="fl">0</span>, <span class="fl">200</span><span class="op">)</span>,</span>
-<span>      extruded <span class="op">=</span> <span class="cn">FALSE</span>,</span>
-<span>      pickable <span class="op">=</span> <span class="cn">TRUE</span>,</span>
-<span>      `_normalize` <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>      getFillColor   <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">255</span>, <span class="fl">100</span>, <span class="fl">0</span>, <span class="fl">200</span><span class="op">)</span>,</span>
+<span>      extruded       <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>      pickable       <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>      `_normalize`   <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>      `_windingOrder` <span class="op">=</span> <span class="st">"CCW"</span></span>
 <span>    <span class="op">)</span></span>
 <span>  <span class="op">)</span></span>
 <span><span class="op">)</span></span>
 <span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"✅ Spec created\n\n"</span><span class="op">)</span></span>
-<span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"🚀 Creating widget...\n"</span><span class="op">)</span></span>
-<span></span>
-<span><span class="va">widget</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/deckgl.html">deckgl</a></span><span class="op">(</span></span>
-<span>  spec <span class="op">=</span> <span class="va">spec</span>,</span>
-<span>  width <span class="op">=</span> <span class="fl">1024</span>,</span>
-<span>  height <span class="op">=</span> <span class="fl">768</span></span>
-<span><span class="op">)</span></span>
-<span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"✅ Widget created!\n\n"</span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"📋 Expected:\n"</span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"   • Orange building footprints (up to 500k)\n"</span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"   • View centered on densest building cluster\n"</span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"   • Gray/black background (no basemap)\n\n"</span><span class="op">)</span></span>
-<span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"💡 Controls:\n"</span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"   • Scroll wheel: zoom in/out\n"</span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"   • Drag: pan around\n"</span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"   • Zoom in (14+) to see building shapes\n\n"</span><span class="op">)</span></span>
-<span></span>
-<span><span class="va">widget</span></span></code></pre></div>
+<span><span class="fu"><a href="../reference/deckgl.html">deckgl</a></span><span class="op">(</span>spec <span class="op">=</span> <span class="va">spec</span>, width <span class="op">=</span> <span class="fl">1024</span>, height <span class="op">=</span> <span class="fl">768</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level3">
 <h3 id="native-geoarrow-in-shiny-no-binary-conversion">Native GeoArrow in Shiny (no binary conversion)<a class="anchor" aria-label="anchor" href="#native-geoarrow-in-shiny-no-binary-conversion"></a>
@@ -765,7 +618,7 @@ GeoParquet with GeoArrow-encoded geometries from the upstream ZIP:</p>
 <p>This example demonstrates rendering GeoArrow polygons in Shiny using
 the native <code>GeoArrowPolygonLayer</code>, which passes Arrow tables
 directly to the layer without converting to binary format:</p>
-<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://shiny.posit.co/" class="external-link">shiny</a></span><span class="op">)</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/TiRizvanov/rDeckgl" class="external-link">rDeckgl</a></span><span class="op">)</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/apache/arrow/" class="external-link">arrow</a></span><span class="op">)</span></span>
@@ -774,7 +627,7 @@ directly to the layer without converting to binary format:</p>
 <span><span class="va">parquet_path</span> <span class="op">&lt;-</span> <span class="st">"Utah.parquet"</span></span>
 <span></span>
 <span><span class="kw">if</span> <span class="op">(</span><span class="op">!</span><span class="fu"><a href="https://rdrr.io/r/base/files.html" class="external-link">file.exists</a></span><span class="op">(</span><span class="va">parquet_path</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
-<span>  <span class="kw"><a href="https://rdrr.io/r/base/stop.html" class="external-link">stop</a></span><span class="op">(</span><span class="st">"❌ Parquet file not found: "</span>, <span class="va">parquet_path</span><span class="op">)</span></span>
+<span>  <span class="kw"><a href="https://rdrr.io/r/base/stop.html" class="external-link">stop</a></span><span class="op">(</span><span class="st">"Parquet file not found: "</span>, <span class="va">parquet_path</span><span class="op">)</span></span>
 <span><span class="op">}</span></span>
 <span></span>
 <span><span class="co"># Read Parquet and create Arrow IPC file</span></span>
