@@ -19,6 +19,8 @@ Description: Provides R bindings for deck.gl, a WebGL framework for rendering
     htmlwidgets and Shiny bindings, supports DuckDB-backed data hydration, and
     bundles the JavaScript assets needed to render deck.gl specifications from R.
 License: MIT + file LICENSE
+URL: https://github.com/TiRizvanov/rDeckgl
+BugReports: https://github.com/TiRizvanov/rDeckgl/issues
 Encoding: UTF-8
 RoxygenNote: 7.3.3
 Depends:

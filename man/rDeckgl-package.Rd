@@ -15,6 +15,14 @@ the Dries Lab and the Boston University Undergraduate Research Opportunities
 Program (UROP).
 }
 
+\seealso{
+Useful links:
+\itemize{
+  \item \url{https://github.com/TiRizvanov/rDeckgl}
+  \item Report bugs at \url{https://github.com/TiRizvanov/rDeckgl/issues}
+}
+
+}
 \author{
 \strong{Maintainer}: Timur Rizvanov \email{timurr@bu.edu}
 
