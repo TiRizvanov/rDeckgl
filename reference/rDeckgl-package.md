@@ -12,6 +12,14 @@ Developed in the Dries Lab at Boston University. This work was supported
 by the Dries Lab and the Boston University Undergraduate Research
 Opportunities Program (UROP).
 
+## See also
+
+Useful links:
+
+- <https://github.com/TiRizvanov/rDeckgl>
+
+- Report bugs at <https://github.com/TiRizvanov/rDeckgl/issues>
+
 ## Author
 
 **Maintainer**: Timur Rizvanov <timurr@bu.edu>
