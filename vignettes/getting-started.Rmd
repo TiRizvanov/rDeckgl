@@ -21,9 +21,12 @@ knitr::opts_chunk$set(
 
 ## Installation
 
-```{r install}
-# Install from a local source checkout
-devtools::install()
+```{r install, eval=FALSE}
+# From CRAN:
+install.packages("rDeckgl")
+
+# Development version from GitHub:
+# remotes::install_github("TiRizvanov/rDeckgl")
 ```
 
 ## Example 1: Basic Scatterplot
