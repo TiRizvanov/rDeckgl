@@ -23,6 +23,7 @@ License: MIT + file LICENSE
 URL: https://github.com/TiRizvanov/rDeckgl
 BugReports: https://github.com/TiRizvanov/rDeckgl/issues
 Encoding: UTF-8
+Language: en-US
 RoxygenNote: 7.3.3
 Depends:
     R (>= 4.1.0)
