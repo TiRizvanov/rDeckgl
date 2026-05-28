@@ -10,8 +10,11 @@ demonstrates the basic usage of rDeckgl with working examples.
 
 ``` r
 
-# Install from a local source checkout
-devtools::install()
+# From CRAN:
+install.packages("rDeckgl")
+
+# Development version from GitHub:
+# remotes::install_github("TiRizvanov/rDeckgl")
 ```
 
 ## Example 1: Basic Scatterplot
