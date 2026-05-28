@@ -89,10 +89,9 @@ shinyApp(ui, server)
 ## ggsql
 
 [`ggsql()`](https://tirizvanov.github.io/rDeckgl/reference/ggsql.md)
-exposes the same renderer through the
-[ggsql](https://posit.co/blog/announcing-ggsql/) dialect — describe a
-deck.gl visualization with `VISUALIZE` / `DRAW` / `PLACE` / `SCALE`
-clauses instead of hand-writing JSON. See
+exposes the same renderer through the ggsql dialect — describe a deck.gl
+visualization with `VISUALIZE` / `DRAW` / `PLACE` / `SCALE` clauses
+instead of hand-writing JSON. See
 [`?ggsql`](https://tirizvanov.github.io/rDeckgl/reference/ggsql.md) for
 the full reference.
 
@@ -114,10 +113,9 @@ bugs to the package maintainer listed in `DESCRIPTION`.
 
 ## License
 
-MIT — see [LICENSE](https://tirizvanov.github.io/rDeckgl/LICENSE) and
-[LICENSE.md](https://tirizvanov.github.io/rDeckgl/LICENSE.md) for the
-full text, including the third-party deck.gl license bundled with the
-JavaScript assets.
+MIT — see [LICENSE](https://tirizvanov.github.io/rDeckgl/LICENSE) for
+the full text, including the third-party deck.gl license bundled with
+the JavaScript assets.
 
 ## Acknowledgements
 

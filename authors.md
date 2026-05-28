@@ -19,11 +19,11 @@
 Source:
 [`DESCRIPTION`](https://github.com/TiRizvanov/rDeckgl/blob/main/DESCRIPTION)
 
-Rizvanov T, Ruiz E, Dries R (2026). *rDeckgl: Deck.gl for R*. R package
-version 0.1.0, <https://github.com/TiRizvanov/rDeckgl>.
+Rizvanov T, Ruiz E, Dries R (2026). *rDeckgl: R Bindings to 'Deck.gl'*.
+R package version 0.1.0, <https://github.com/TiRizvanov/rDeckgl>.
 
     @Manual{,
-      title = {rDeckgl: Deck.gl for R},
+      title = {rDeckgl: R Bindings to 'Deck.gl'},
       author = {Timur Rizvanov and Edward C. Ruiz and Ruben Dries},
       year = {2026},
       note = {R package version 0.1.0},
