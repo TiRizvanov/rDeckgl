@@ -2,26 +2,31 @@
 
 ## Test environments
 
-* local macOS 15.7.3 (aarch64-apple-darwin20), R 4.5.1 — 0 errors, 0 warnings, 0 notes (`--as-cran --no-manual`, incoming remote checks disabled by `devtools::check()`)
-* (please re-run on win-builder + R-hub before submission)
+* local macOS 15.7.3 (aarch64-apple-darwin20), R 4.5.1 — 0 errors, 0 warnings,
+  0 notes (`--as-cran --no-manual`)
+* win-builder R-devel (2026-05-27 r90083 ucrt, x86_64-w64-mingw32) — 0 errors,
+  0 warnings, 1 NOTE (CRAN incoming feasibility / New submission; spell-check
+  on software names — addressed by quoting in DESCRIPTION; invalid file URI
+  to LICENSE.md — fixed in README)
+* R-hub v2 (Linux, macOS, Windows) — all green
+  https://github.com/TiRizvanov/rDeckgl/actions
 
 ## R CMD check results
 
-0 errors | 0 warnings | 0 notes in the local check.
+0 errors | 0 warnings | 1 NOTE in the local check.
 
-Expected CRAN incoming NOTE:
+The NOTE is the standard "CRAN incoming feasibility" — first submission. All
+sub-checks (mis-spellings, invalid URI, dead URL) have been addressed in this
+version of the tarball.
 
-  > New submission
-
-Installed size INFO:
+## Installed size
 
   > installed size is 8.5Mb
   > sub-directories of 1Mb or more:
   >   htmlwidgets   8.2Mb
 
-This is the first CRAN submission of rDeckgl. The size INFO is expected — the
-package bundles the pre-built JavaScript that renders deck.gl visualisations
-inside an htmlwidget (see below).
+The package bundles the pre-built JavaScript that renders deck.gl
+visualisations inside an htmlwidget. See "Bundled JavaScript" below.
 
 ## Bundled JavaScript
 
@@ -42,9 +47,3 @@ unavailable at runtime.
 If CRAN prefers a leaner footprint we are happy to externalize
 `parquet-wasm/parquet_wasm_bg.wasm` (the largest single file) and load it
 exclusively from a CDN at runtime. Please advise.
-
-## URLs
-
-The package does not currently declare `URL` or `BugReports` fields because the
-public repository and pkgdown site are not yet available. Add them back before
-submission only after `tools::check_package_urls(".")` reports no broken URLs.
