@@ -1,32 +1,38 @@
-# Submission notes — rDeckgl 0.1.0
+# Submission notes — rDeckgl 0.2.0
+
+## Changes since 0.1.0
+
+* Query results declared with `format = "arrow"` can be exported by DuckDB
+  itself as an Arrow (or Parquet) file that ships with the widget as an html
+  dependency attachment and is bound to deck.gl layers as binary attributes,
+  so rows are no longer materialised in R (new arguments `data_transport` and
+  `data_dir`).
+* Faster JSON row export, multi-batch Polygon2D support and robustness fixes;
+  see NEWS.md.
 
 ## Test environments
 
-* local macOS 15.7.3 (aarch64-apple-darwin20), R 4.5.1 — 0 errors, 0 warnings,
-  0 notes (`--as-cran --no-manual`)
-* win-builder R-devel (2026-05-27 r90083 ucrt, x86_64-w64-mingw32) — 0 errors,
-  0 warnings, 1 NOTE (CRAN incoming feasibility / New submission; spell-check
-  on software names — addressed by quoting in DESCRIPTION; invalid file URI
-  to LICENSE.md — fixed in README)
-* R-hub v2 (Linux, macOS, Windows) — all green
-  https://github.com/TiRizvanov/rDeckgl/actions
+* local macOS 15.7.9 (aarch64-apple-darwin20), R 4.5.1 — 0 errors, 0 warnings,
+  1 NOTE (`R CMD check --as-cran`)
 
 ## R CMD check results
 
-0 errors | 0 warnings | 1 NOTE in the local check.
+0 errors | 0 warnings | 1 NOTE
 
-The NOTE is the standard "CRAN incoming feasibility" — first submission. All
-sub-checks (mis-spellings, invalid URI, dead URL) have been addressed in this
-version of the tarball.
+The NOTE is local only: "Skipping checking HTML validation: 'tidy' doesn't look
+like recent enough HTML Tidy".
+
+There are no reverse dependencies on CRAN.
 
 ## Installed size
 
-  > installed size is 8.5Mb
+  > installed size is 8.6Mb
   > sub-directories of 1Mb or more:
   >   htmlwidgets   8.2Mb
 
 The package bundles the pre-built JavaScript that renders deck.gl
-visualisations inside an htmlwidget. See "Bundled JavaScript" below.
+visualisations inside an htmlwidget; the bundled libraries are unchanged since
+0.1.0. See "Bundled JavaScript" below.
 
 ## Bundled JavaScript
 

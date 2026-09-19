@@ -1,4 +1,4 @@
-# rDeckgl 0.1.0.9008
+# rDeckgl 0.2.0
 
 * Never disconnect a caller-supplied DuckDB connection. A Shiny session used to
   close every connection it had seen when it ended, which killed the shared
@@ -14,8 +14,6 @@
 * Scope an auto-created `data_dir` to the Shiny session and remove it when the
   session ends, rather than leaving one temporary directory per render.
 
-# rDeckgl 0.1.0.9007
-
 * Ship `data_transport = "file"` payloads as an html dependency attachment of
   the widget, so the relative Arrow/Parquet URL resolves in the RStudio Viewer,
   in Shiny and after `htmlwidgets::saveWidget(selfcontained = FALSE)` into any
@@ -28,8 +26,6 @@
   read such columns element-wise in the row fallback: `toArray()` ignores the
   Arrow validity bitmap and would have rendered raw buffer bytes.
 
-# rDeckgl 0.1.0.9006
-
 * Export `format = "arrow"` DuckDB data nodes straight from the database
   engine instead of materialising rows in R: `COPY (FORMAT ARROWS)` when the
   nanoarrow extension loads, otherwise Arrow record-batch streaming, otherwise
@@ -40,15 +36,11 @@
   `getFillColor` and `getRadius` accessors across all record batches. Other
   row-referencing accessors fall back to row objects with a console warning.
 
-# rDeckgl 0.1.0.9005
-
 * Preallocate hydrated rows for ordinary atomic columns while retaining named
   assignment for nested, attributed and unusually named data.
 * Use primitive column extraction and validation during plain-row export;
   validate scalar shapes, attributes and exact types before concatenation.
   Preserve editable rows, mixed logical/numeric fallbacks and serializer options.
-
-# rDeckgl 0.1.0.9004
 
 * Avoid temporary one-row data frames for live Shiny JSON query responses with
   ordinary atomic columns. Preserve the existing row values and wire JSON;
@@ -57,25 +49,17 @@
   avoiding redundant per-cell type-set lookups and per-row attribute lists.
   Preserve mixed-type, missing-value, JavaScript and editability guards.
 
-# rDeckgl 0.1.0.9003
-
 * Preserve JSON booleans in edited SQL rows mixing logical and numeric cells,
   using the original serializer when scalar types differ within a column.
-
-# rDeckgl 0.1.0.9002
 
 * Encode plain SQL rows before htmlwidgets scans for JavaScript evaluations,
   avoiding a named traversal of every data cell. Preserve custom serializers.
 * Avoid per-scalar data-frame method dispatch while constructing the same
   editable row lists, including nested and attributed column values.
 
-# rDeckgl 0.1.0.9001
-
 * Serialize plain SQL-result rows through column vectors to avoid per-cell JSON
   dispatch. The emitted JSON and editable R row lists are preserved; nested,
   attributed and incompatible rows retain their existing serialization path.
-
-# rDeckgl 0.1.0.9000
 
 * Preserve all polygon rows across Arrow record batches in the binary
   SolidPolygonLayer path. Ignore padded offsets and rebase sliced buffers;
