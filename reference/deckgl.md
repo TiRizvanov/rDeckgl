@@ -39,9 +39,12 @@ deckgl(
 - con:
 
   Optional DuckDB connection to use for queries. If provided, this
-  connection will be used instead of creating a new one. This is useful
-  for GeoArrow workflows where you need spatial extension and geometry
-  tables already set up.
+  connection is used instead of creating a new one, which is useful for
+  GeoArrow workflows where the spatial extension and geometry tables are
+  already set up. \`rDeckgl\` never disconnects a supplied connection,
+  in a Shiny session or otherwise; only connections it opens itself are
+  closed, when the call returns or when the Shiny session that serves
+  their queries ends.
 
 - data_transport:
 
@@ -49,12 +52,18 @@ deckgl(
   \`"auto"\` uses \`"file"\` when \`data_dir\` is supplied and otherwise
   falls back to \`"inline"\` for portable widgets; \`"inline"\` embeds
   base64 payloads in the widget; \`"file"\` writes binary files to
-  \`data_dir\` and uses relative URLs.
+  \`data_dir\` and uses relative URLs. Data nodes with \`format =
+  "arrow"\` are exported by DuckDB itself under either transport; see
+  Details.
 
 - data_dir:
 
-  Directory for \`"file"\` transport. Serve or save the widget from the
-  same directory so relative URLs resolve.
+  Directory for \`"file"\` transport; when omitted a session temporary
+  directory is used. The data files travel with the widget as an html
+  dependency attachment, so \`htmlwidgets::saveWidget(selfcontained =
+  FALSE)\`, the RStudio Viewer and Shiny all resolve them
+  (\`selfcontained = TRUE\` is not supported for file transport). Serve
+  or save the widget from the same directory so relative URLs resolve.
 
 - width:
 
@@ -67,6 +76,32 @@ deckgl(
 ## Value
 
 An htmlwidget that renders the Deck.gl visualization.
+
+## Details
+
+A \`type = "duckdb"\` data node with \`format = "arrow"\` never
+materialises query rows in R. DuckDB writes the result straight to a
+binary file using the first method that succeeds: \`COPY ... (FORMAT
+ARROWS)\` when the community \`nanoarrow\` DuckDB extension can be
+loaded, otherwise Arrow record-batch streaming through
+\`arrow::write_ipc_stream()\`, otherwise \`COPY ... (FORMAT PARQUET)\`.
+With \`data_transport = "file"\` that file is written into \`data_dir\`
+and the node carries a relative \`\_\_arrow_url\` (or
+\`\_\_parquet_url\`); with \`"inline"\` its bytes are base64-encoded
+into the widget as \`\_\_arrow\` (or \`\_\_parquet\`). Either way the
+node records the method in \`\_\_export_method\` (\`"copy_arrows"\`,
+\`"record_batch_stream"\` or \`"copy_parquet"\`). Extensions are never
+installed on a user-supplied \`con\`; only \`LOAD nanoarrow\` is
+attempted.
+
+In the browser, standard layers such as \`ScatterplotLayer\` bind such a
+table as binary attributes rather than row objects when \`getPosition\`,
+\`getFillColor\` and \`getRadius\` are plain column references, for
+example \`"@@=\[x, y\]"\`, \`"@@=\[x, y, 0\]"\`, \`"@@=\[r, g, b\]"\`
+and \`"@@=radius"\` (or \`list(fields = c("x", "y"))\`). Constant
+colours and radii stay plain props. Any other accessor that references
+row fields makes the layer fall back to row objects, with a console
+warning naming the accessor.
 
 ## Examples
 

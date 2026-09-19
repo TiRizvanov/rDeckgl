@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">rDeckgl</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.0.9008</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -37,7 +37,53 @@
     </div>
 
     <div class="section level2">
-<h2 class="pkg-version" data-toc-text="0.1.0" id="rdeckgl-010">rDeckgl 0.1.0<a class="anchor" aria-label="anchor" href="#rdeckgl-010"></a></h2>
+<h2 class="pkg-version" data-toc-text="0.1.0.9008" id="rdeckgl-0109008">rDeckgl 0.1.0.9008<a class="anchor" aria-label="anchor" href="#rdeckgl-0109008"></a></h2>
+<ul><li>Never disconnect a caller-supplied DuckDB connection. A Shiny session used to close every connection it had seen when it ended, which killed the shared connection an app opens once at top level and broke every later session in the same R process. Only connections <code><a href="../reference/deckgl.html">deckgl()</a></code> opens itself are closed now.</li>
+<li>Convert Arrow values that have no direct JavaScript number in the row fallback. A DECIMAL column, which DuckDB produces for ordinary aggregates such as <code>SUM</code> over integers, reached the layer as a raw Arrow object that stringifies to “0” and throws on <code>valueOf()</code>. Convertible values become numbers, the rest become <code>NULL</code> with one warning naming the column and type.</li>
+<li>Report the real cause when a page saved with <code>selfcontained = TRUE</code> cannot resolve a file-transport payload, instead of rendering an empty layer.</li>
+<li>Scope an auto-created <code>data_dir</code> to the Shiny session and remove it when the session ends, rather than leaving one temporary directory per render.</li>
+</ul></div>
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.1.0.9007" id="rdeckgl-0109007">rDeckgl 0.1.0.9007<a class="anchor" aria-label="anchor" href="#rdeckgl-0109007"></a></h2>
+<ul><li>Ship <code>data_transport = "file"</code> payloads as an html dependency attachment of the widget, so the relative Arrow/Parquet URL resolves in the RStudio Viewer, in Shiny and after <code>htmlwidgets::saveWidget(selfcontained = FALSE)</code> into any directory, not only when the page is served from <code>data_dir</code>. <code>data_dir</code> now defaults to a session temporary directory.</li>
+<li>Refuse a DuckDB data node whose query holds more than one SQL statement. The <code>COPY</code> rung could not parse it and the record-batch rung would have executed every statement on the caller’s connection and exported the last result.</li>
+<li>Skip binary attribute binding when a bound column contains NULL values, and read such columns element-wise in the row fallback: <code>toArray()</code> ignores the Arrow validity bitmap and would have rendered raw buffer bytes.</li>
+</ul></div>
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.1.0.9006" id="rdeckgl-0109006">rDeckgl 0.1.0.9006<a class="anchor" aria-label="anchor" href="#rdeckgl-0109006"></a></h2>
+<ul><li>Export <code>format = "arrow"</code> DuckDB data nodes straight from the database engine instead of materialising rows in R: <code>COPY (FORMAT ARROWS)</code> when the nanoarrow extension loads, otherwise Arrow record-batch streaming, otherwise <code>COPY (FORMAT PARQUET)</code>. File transport writes into <code>data_dir</code>; inline transport embeds the exported bytes. Nodes record the <code>__export_method</code>.</li>
+<li>Bind Arrow and Parquet payloads of standard layers such as ScatterplotLayer as deck.gl binary attributes for column-reference <code>getPosition</code>, <code>getFillColor</code> and <code>getRadius</code> accessors across all record batches. Other row-referencing accessors fall back to row objects with a console warning.</li>
+</ul></div>
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.1.0.9005" id="rdeckgl-0109005">rDeckgl 0.1.0.9005<a class="anchor" aria-label="anchor" href="#rdeckgl-0109005"></a></h2>
+<ul><li>Preallocate hydrated rows for ordinary atomic columns while retaining named assignment for nested, attributed and unusually named data.</li>
+<li>Use primitive column extraction and validation during plain-row export; validate scalar shapes, attributes and exact types before concatenation. Preserve editable rows, mixed logical/numeric fallbacks and serializer options.</li>
+</ul></div>
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.1.0.9004" id="rdeckgl-0109004">rDeckgl 0.1.0.9004<a class="anchor" aria-label="anchor" href="#rdeckgl-0109004"></a></h2>
+<ul><li>Avoid temporary one-row data frames for live Shiny JSON query responses with ordinary atomic columns. Preserve the existing row values and wire JSON; attributed, list, matrix and unusual data frames retain base R subsetting.</li>
+<li>Reuse validated prototype types and row attributes during static export, avoiding redundant per-cell type-set lookups and per-row attribute lists. Preserve mixed-type, missing-value, JavaScript and editability guards.</li>
+</ul></div>
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.1.0.9003" id="rdeckgl-0109003">rDeckgl 0.1.0.9003<a class="anchor" aria-label="anchor" href="#rdeckgl-0109003"></a></h2>
+<ul><li>Preserve JSON booleans in edited SQL rows mixing logical and numeric cells, using the original serializer when scalar types differ within a column.</li>
+</ul></div>
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.1.0.9002" id="rdeckgl-0109002">rDeckgl 0.1.0.9002<a class="anchor" aria-label="anchor" href="#rdeckgl-0109002"></a></h2>
+<ul><li>Encode plain SQL rows before htmlwidgets scans for JavaScript evaluations, avoiding a named traversal of every data cell. Preserve custom serializers.</li>
+<li>Avoid per-scalar data-frame method dispatch while constructing the same editable row lists, including nested and attributed column values.</li>
+</ul></div>
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.1.0.9001" id="rdeckgl-0109001">rDeckgl 0.1.0.9001<a class="anchor" aria-label="anchor" href="#rdeckgl-0109001"></a></h2>
+<ul><li>Serialize plain SQL-result rows through column vectors to avoid per-cell JSON dispatch. The emitted JSON and editable R row lists are preserved; nested, attributed and incompatible rows retain their existing serialization path.</li>
+</ul></div>
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.1.0.9000" id="rdeckgl-0109000">rDeckgl 0.1.0.9000<a class="anchor" aria-label="anchor" href="#rdeckgl-0109000"></a></h2>
+<ul><li>Preserve all polygon rows across Arrow record batches in the binary SolidPolygonLayer path. Ignore padded offsets and rebase sliced buffers; this fixes truncated geometry and allocation failures without changing APIs.</li>
+<li>Add browser-binding regression checks for single, multiple and sliced batches (<code>node tests/js/polygon-batches.cjs</code>).</li>
+</ul></div>
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.1.0" id="rdeckgl-010">rDeckgl 0.1.0<a class="anchor" aria-label="anchor" href="#rdeckgl-010"></a></h2><p class="text-muted">CRAN release: 2026-06-01</p>
 <div class="section level3">
 <h3 id="initial-release-0-1-0">Initial Release<a class="anchor" aria-label="anchor" href="#initial-release-0-1-0"></a></h3>
 <ul><li>Initial CRAN submission</li>
@@ -79,7 +125,7 @@
 </div>
 
 <div class="pkgdown-footer-right">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.0.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.1.</p>
 </div>
 
     </footer></div>
