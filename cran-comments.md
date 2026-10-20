@@ -41,12 +41,13 @@ render deck.gl spec specifications without network access:
 
 | Component        | Size  | Purpose                                      |
 | ---------------- | ----- | -------------------------------------------- |
-| `deckgl/`        | 2.0 M | deck.gl 9.1.15 IIFE bundle + React 18 + CSS  |
+| `deckgl/`        | 2.0 M | deck.gl 9.2.4 IIFE bundle + React 18 + CSS   |
 | `parquet-wasm/`  | 5.3 M | `parquet_wasm_bg.wasm` (Parquet decoding)    |
-| `maplibre/`      | 812 K | MapLibre GL JS 4.0 (base-map provider)       |
+| `maplibre/`      | 812 K | MapLibre GL JS 3.6.1 (base-map provider)     |
 
-These libraries are all MIT-licensed upstream. They are shipped with the
-package so that users can render visualisations and decode Parquet data
+deck.gl is MIT-licensed upstream, parquet-wasm MIT or Apache-2.0 and MapLibre
+GL JS BSD-3-Clause. They are shipped with the package so that users can
+render visualisations and decode Parquet data
 offline; the htmlwidget falls back to CDN URLs only if the local copies are
 unavailable at runtime.
 

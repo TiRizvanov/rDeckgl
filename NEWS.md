@@ -1,3 +1,8 @@
+# rDeckgl (development version)
+
+* The html dependencies now carry the versions of the bundled libraries,
+  deck.gl 9.2.4 and MapLibre GL JS 3.6.1; they were labelled 9.1.15 and 4.0.0.
+
 # rDeckgl 0.2.0
 
 * Never disconnect a caller-supplied DuckDB connection. A Shiny session used to
