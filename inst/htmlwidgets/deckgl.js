@@ -1717,6 +1717,10 @@ async function renderDeckGlView(el, payload) {
       return payload ? {...layerSpec, data: payload.rows || []} : layerSpec;
     })
   };
+  // A top-level "@@type" (e.g. "DeckGL") would make the converter construct a
+  // second Deck, attached to document.body, from the whole spec. This widget
+  // creates its own Deck below, so only the props are converted.
+  delete specForConverter['@@type'];
   console.log('[deckgl] Spec for JSONConverter:', {
     hasViews: !!specForConverter.views,
     hasInitialViewState: !!specForConverter.initialViewState,

@@ -1,5 +1,9 @@
 # rDeckgl (development version)
 
+* Create one Deck per widget. A spec with a top-level `"@@type" = "DeckGL"`,
+  as in the README and the vignette, was also converted into a second Deck
+  attached to the page body, which drew the layers again over the widget and,
+  with a `MapView`, threw a deck.gl assertion.
 * The html dependencies now carry the versions of the bundled libraries,
   deck.gl 9.2.4 and MapLibre GL JS 3.6.1; they were labelled 9.1.15 and 4.0.0.
 
