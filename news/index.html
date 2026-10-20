@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">rDeckgl</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.2.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.2.0.9000</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -37,7 +37,12 @@
     </div>
 
     <div class="section level2">
-<h2 class="pkg-version" data-toc-text="0.2.0" id="rdeckgl-020">rDeckgl 0.2.0<a class="anchor" aria-label="anchor" href="#rdeckgl-020"></a></h2>
+<h2 class="pkg-version" data-toc-text="development version" id="rdeckgl-development-version">rDeckgl (development version)<a class="anchor" aria-label="anchor" href="#rdeckgl-development-version"></a></h2>
+<ul><li>Create one Deck per widget. A spec with a top-level <code>"@@type" = "DeckGL"</code>, as in the README and the vignette, was also converted into a second Deck attached to the page body, which drew the layers again over the widget and, with a <code>MapView</code>, threw a deck.gl assertion.</li>
+<li>The html dependencies now carry the versions of the bundled libraries, deck.gl 9.2.4 and MapLibre GL JS 3.6.1; they were labelled 9.1.15 and 4.0.0.</li>
+</ul></div>
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.2.0" id="rdeckgl-020">rDeckgl 0.2.0<a class="anchor" aria-label="anchor" href="#rdeckgl-020"></a></h2><p class="text-muted">CRAN release: 2026-09-20</p>
 <ul><li><p>Never disconnect a caller-supplied DuckDB connection. A Shiny session used to close every connection it had seen when it ended, which killed the shared connection an app opens once at top level and broke every later session in the same R process. Only connections <code><a href="../reference/deckgl.html">deckgl()</a></code> opens itself are closed now.</p></li>
 <li><p>Convert Arrow values that have no direct JavaScript number in the row fallback. A DECIMAL column, which DuckDB produces for ordinary aggregates such as <code>SUM</code> over integers, reached the layer as a raw Arrow object that stringifies to “0” and throws on <code>valueOf()</code>. Convertible values become numbers, the rest become <code>NULL</code> with one warning naming the column and type.</p></li>
 <li><p>Report the real cause when a page saved with <code>selfcontained = TRUE</code> cannot resolve a file-transport payload, instead of rendering an empty layer.</p></li>
